@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TWS Price List Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --navy:#0a1628;--navy2:#0f2040;--navy3:#1a3460;
+  --blue:#1565c0;--blue2:#1976d2;--blue-lt:#e3f0ff;
+  --teal:#00838f;--teal-lt:#e0f7fa;
+  --white:#fff;--off:#f7f9fc;--bg:#eef2f8;
+  --border:#d0d9e8;--border2:#b8c5d9;
+  --text:#0a1628;--muted:#5a6a82;--faint:#8a9ab2;
+  --green:#1b7a3e;--green-lt:#e8f5ed;
+  --orange:#c45c10;--orange-lt:#fef3ec;
+  --red:#b91c1c;--red-lt:#fef2f2;
+  --sh:0 1px 4px rgba(10,22,40,.10);
+  --shlg:0 8px 28px rgba(10,22,40,.16);
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;font-size:14px;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── HEADER ── */
+.hdr{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);
+  color:var(--white);padding:0 28px;height:68px;
+  display:flex;align-items:center;gap:18px;
+  box-shadow:0 2px 16px rgba(10,22,40,.45);
+}
+/* TWS Logo SVG recreated from brand */
+.tws-logo{display:flex;align-items:center;gap:12px;text-decoration:none;}
+.tws-mark{
+  width:46px;height:46px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,#1565c0 0%,#00838f 100%);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 12px rgba(21,101,192,.5);
+  position:relative;overflow:hidden;
+}
+.tws-mark svg{width:28px;height:28px;}
+.tws-wordmark{display:flex;flex-direction:column;}
+.tws-name{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.3px;line-height:1.1;}
+.tws-sub{font-size:9px;color:#8ab4d8;letter-spacing:.5px;font-weight:400;margin-top:1px;}
+.hdr-divider{width:1px;height:32px;background:rgba(255,255,255,.15);}
+.hdr-tool{font-size:12px;color:#8ab4d8;font-weight:500;}
+.hdr-right{margin-left:auto;display:flex;gap:7px;align-items:center;}
+.hbadge{font-size:10px;font-family:'JetBrains Mono',monospace;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.08);color:#8ab4d8;border:1px solid rgba(255,255,255,.12);transition:all .3s;}
+.hbadge.ok{background:rgba(27,122,62,.25);color:#4ade80;border-color:rgba(74,222,128,.3);}
+
+.page{max-width:1100px;margin:0 auto;padding:24px 20px;}
+
+/* ── NOTICE ── */
+.notice{
+  background:var(--white);border:1px solid var(--border);border-left:4px solid var(--blue2);
+  border-radius:var(--r);padding:12px 16px;margin-bottom:20px;
+  font-size:12px;color:var(--muted);line-height:1.8;box-shadow:var(--sh);
+}
+.notice strong{color:var(--text);}
+.notice code{font-family:'JetBrains Mono',monospace;background:var(--blue-lt);padding:1px 5px;border-radius:3px;font-size:11px;color:var(--blue);}
+
+/* ── UPLOAD ── */
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.drop-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.drop-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh);}
+.dc-tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--blue2);margin-bottom:5px;}
+.drop-card h3{font-size:13px;font-weight:700;margin-bottom:4px;}
+.drop-card p{font-size:11px;color:var(--muted);line-height:1.55;margin-bottom:12px;}
+.dz{border:2px dashed var(--border2);border-radius:8px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--off);}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.dz:hover,.dz.over{border-color:var(--blue2);background:var(--blue-lt);}
+.dz.loaded{border-style:solid;border-color:var(--green);background:var(--green-lt);}
+.dz-icon{font-size:24px;margin-bottom:5px;}
+.dz h4{font-size:12px;font-weight:600;margin-bottom:2px;}
+.dz .hint{font-size:10px;color:var(--faint);}
+.dz .fname{font-size:10px;color:var(--green);font-family:'JetBrains Mono',monospace;margin-top:4px;font-weight:600;word-break:break-all;}
+
+/* ── GEN BUTTON ── */
+.gen-btn{
+  width:100%;padding:14px;border:none;border-radius:var(--r);
+  background:linear-gradient(135deg,var(--blue) 0%,var(--teal) 100%);
+  color:var(--white);font-family:'Inter',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;
+  margin:0 0 16px;letter-spacing:-.2px;transition:all .15s;
+  box-shadow:0 4px 16px rgba(21,101,192,.35);
+}
+.gen-btn:hover:not(:disabled){filter:brightness(1.1);box-shadow:var(--shlg);transform:translateY(-1px);}
+.gen-btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
+
+/* ── PROGRESS ── */
+.prog{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px 22px;margin-bottom:16px;display:none;box-shadow:var(--sh);}
+.prog.show{display:block;}
+.prog-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.prog-lbl{font-size:13px;font-weight:600;}
+.prog-pct{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--blue2);}
+.prog-bar{height:5px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:12px;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));border-radius:3px;transition:width .35s;}
+.prog-steps{display:flex;gap:5px;}
+.ps{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 3px;text-align:center;font-size:9px;font-weight:600;color:var(--faint);transition:all .2s;}
+.ps.run{background:var(--orange-lt);border-color:var(--orange);color:var(--orange);}
+.ps.done{background:var(--green-lt);border-color:#86efac;color:var(--green);}
+
+/* ── RESULT ── */
+.result{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:24px;display:none;box-shadow:var(--sh);}
+.result.show{display:block;}
+.result-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px;}
+.result-title{font-size:17px;font-weight:800;color:var(--navy);}
+.result-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+
+/* ── DOWNLOAD BUTTONS ── */
+.dl-row{display:flex;gap:10px;flex-wrap:wrap;}
+.dl-btn{
+  padding:10px 18px;border:none;border-radius:8px;font-family:'Inter',sans-serif;
+  font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:7px;
+}
+.dl-excel{background:linear-gradient(135deg,var(--blue),var(--blue2));color:var(--white);box-shadow:0 3px 10px rgba(21,101,192,.3);}
+.dl-excel:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.dl-pdf-fs{background:linear-gradient(135deg,var(--navy),var(--navy3));color:var(--white);box-shadow:0 3px 10px rgba(10,22,40,.3);}
+.dl-pdf-fs:hover{filter:brightness(1.2);transform:translateY(-1px);}
+.dl-pdf-ita{background:linear-gradient(135deg,#14532d,#166534);color:var(--white);box-shadow:0 3px 10px rgba(20,83,45,.3);}
+.dl-pdf-ita:hover{filter:brightness(1.2);transform:translateY(-1px);}
+
+/* ── STATS ── */
+.stats-row{display:flex;gap:10px;margin-bottom:18px;}
+.stat-card{background:linear-gradient(135deg,var(--navy),var(--navy3));border-radius:8px;padding:12px 16px;flex:1;color:var(--white);}
+.stat-n{font-size:22px;font-weight:800;color:#60a5fa;font-family:'JetBrains Mono',monospace;}
+.stat-l{font-size:10px;color:#8ab4d8;margin-top:2px;font-weight:500;}
+
+/* ── VERIFY ── */
+.verify{border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:18px;}
+.verify h4{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:8px;}
+.vgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
+.vc{border-radius:6px;padding:7px 5px;text-align:center;border:1px solid;}
+.vc.ok{background:#f0fdf4;border-color:#86efac;}
+.vc.err{background:var(--red-lt);border-color:#fca5a5;}
+.vc-l{font-size:8px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:2px;}
+.vc-v{font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+.vc-n{font-size:8px;margin-top:1px;}
+.vc.ok .vc-v,.vc.ok .vc-n{color:#15803d;}
+.vc.err .vc-v,.vc.err .vc-n{color:var(--red);}
+
+/* ── SHEETS ── */
+.sheets-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;}
+.sc{border:1px solid var(--border);border-radius:7px;padding:10px 12px;background:var(--off);}
+.sc.inc{border-left:3px solid var(--blue2);}
+.sc.ex{border-left:3px solid var(--teal);}
+.sc-n{font-size:12px;font-weight:700;margin-bottom:1px;}
+.sc-m{font-size:10px;color:var(--faint);}
+
+/* ── PREVIEW ── */
+.pv-wrap{border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.pv-toolbar{background:var(--navy);}
+.pv-tb-top{padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.08);}
+.pv-tb-bot{padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.pv-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#8ab4d8;}
+.ctrl-grp{display:flex;gap:4px;align-items:center;}
+.tbtn{font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);cursor:pointer;color:#8ab4d8;font-family:'Inter',sans-serif;transition:all .15s;}
+.tbtn:hover{background:rgba(255,255,255,.12);color:var(--white);}
+.tbtn.on{background:rgba(255,255,255,.9);color:var(--navy);border-color:transparent;}
+.tbtn.gon{background:linear-gradient(135deg,var(--blue),var(--teal));color:var(--white);border-color:transparent;}
+.csep{width:1px;height:18px;background:rgba(255,255,255,.12);}
+.search-box{padding:7px 12px;border:1px solid rgba(255,255,255,.15);border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;color:var(--white);background:rgba(255,255,255,.08);outline:none;width:230px;transition:border-color .2s;}
+.search-box::placeholder{color:#5a7a9a;}
+.search-box:focus{border-color:rgba(100,160,255,.5);background:rgba(255,255,255,.12);}
+.cat-select{padding:7px 12px;border:1px solid rgba(255,255,255,.15);border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;color:var(--white);background:rgba(255,255,255,.08);outline:none;cursor:pointer;}
+.cat-select option{background:var(--navy2);color:var(--white);}
+.rcount{font-size:11px;color:#5a7a9a;margin-left:auto;font-family:'JetBrains Mono',monospace;}
+.pv-scroll{overflow-x:auto;max-height:560px;overflow-y:auto;}
+table{width:100%;border-collapse:collapse;font-size:11px;min-width:960px;}
+th{background:var(--navy2);padding:8px 9px;font-weight:700;color:#60a5fa;font-size:9px;text-transform:uppercase;letter-spacing:.6px;border-bottom:2px solid rgba(255,255,255,.1);white-space:nowrap;position:sticky;top:0;z-index:2;}
+th.r{text-align:right;}
+td{padding:6px 9px;border-bottom:1px solid var(--border);vertical-align:middle;}
+td.r{text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--navy);}
+td.blank{text-align:right;color:#c8d5e8;font-size:10px;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f0f5ff;}
+.cat-row td{background:linear-gradient(90deg,var(--navy),var(--navy3));font-size:9px;font-weight:800;color:#60a5fa;text-transform:uppercase;letter-spacing:1.2px;padding:7px 9px;border-top:2px solid rgba(100,160,255,.2);border-bottom:1px solid rgba(100,160,255,.15);}
+.no-result{text-align:center;padding:40px;color:var(--muted);font-size:13px;}
+
+/* ── PDF MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(10,22,40,.75);z-index:9999;display:none;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--white);border-radius:14px;padding:28px;width:500px;max-width:96vw;box-shadow:0 24px 64px rgba(0,0,0,.35);}
+.modal h3{font-size:16px;font-weight:800;color:var(--navy);margin-bottom:4px;}
+.modal-sub{font-size:12px;color:var(--muted);margin-bottom:18px;}
+.modal-items{display:flex;flex-direction:column;gap:6px;margin-bottom:20px;max-height:320px;overflow-y:auto;}
+.modal-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:7px;cursor:pointer;background:var(--off);font-size:12px;font-weight:500;transition:background .1s;}
+.modal-item:hover{background:var(--blue-lt);}
+.modal-item input{width:14px;height:14px;cursor:pointer;accent-color:var(--blue2);}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;}
+.modal-cancel{padding:9px 18px;border:1px solid var(--border);border-radius:7px;background:var(--off);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
+.modal-go{padding:9px 20px;border:none;border-radius:7px;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;color:var(--white);}
+
+/* PDF PRINT STYLES */
+@media print {
+  body * { visibility:hidden; }
+  #pdfFrame,#pdfFrame * { visibility:visible; }
+  #pdfFrame { position:fixed;inset:0;z-index:99999; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER with real TWS branding -->
+<div class="hdr">
+  <div class="tws-logo">
+    <div class="tws-mark">
+      <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Water drop shape -->
+        <path d="M14 3 C14 3 5 13 5 18 C5 23 9 26 14 26 C19 26 23 23 23 18 C23 13 14 3 14 3Z" fill="white" opacity="0.9"/>
+        <!-- Wave inside -->
+        <path d="M8 19 Q11 16 14 19 Q17 22 20 19" stroke="#1565c0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M8 22 Q11 19 14 22 Q17 25 20 22" stroke="#1565c0" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.6"/>
+      </svg>
+    </div>
+    <div class="tws-wordmark">
+      <div class="tws-name">The Waterproofing Shop</div>
+      <div class="tws-sub">thewaterproofingshop.com.au</div>
+    </div>
+  </div>
+  <div class="hdr-divider"></div>
+  <div class="hdr-tool">FORSPEC Price List Manager</div>
+  <div class="hdr-right">
+    <div class="hbadge" id="bExcel">No Excel uploaded</div>
+    <div class="hbadge" id="bPDF">No PDF</div>
+  </div>
+</div>
+
+<div class="page">
+
+  <div class="notice">
+    <strong>205 products pre-loaded from all Forspec Word docs</strong> — prices are original and untouched.<br>
+    <strong>To update prices:</strong> upload your <code>TWS Excel</code> (only matched products updated, all others preserved) and/or <code>Innovative Tools PDF</code> (RRP only).<br>
+    Download as <strong>Excel</strong> (9 sheets) or <strong>PDF</strong> matching the exact format of the original Word/PDF price lists.
+  </div>
+
+  <div class="section-title">Upload Files to Update Prices <span style="font-weight:400;text-transform:none;letter-spacing:0">(Optional — prices preserved if not updated)</span></div>
+  <div class="drop-row">
+    <div class="drop-card">
+      <div class="dc-tag">TWS Master Excel — Price Override</div>
+      <h3>TWS Price List Excel</h3>
+      <p>B=GTIN · C=Product · D=RRP · E=Distributor · F=Tier 1 · G=Tier 2 · H=Tier 3<br>
+      Only matched products updated. Blank tiers stay blank. All others preserved exactly.</p>
+      <div class="dz" id="dzExcel">
+        <input type="file" accept=".xlsx,.xls" onchange="loadExcel(this.files[0])">
+        <div class="dz-icon" id="iExcel">📊</div>
+        <h4>Drag &amp; drop or click</h4>
+        <div class="hint">TWS_Price_List_UPDATED.xlsx</div>
+        <div class="fname" id="nExcel"></div>
+      </div>
+    </div>
+    <div class="drop-card">
+      <div class="dc-tag">Innovative Tools PDF — RRP Update</div>
+      <h3>Innovative Tools Price List PDF</h3>
+      <p>Updates RRP for overlapping products (Puddle Flanges, Flood Test Balloons, etc.). All other prices remain untouched.</p>
+      <div class="dz" id="dzPDF">
+        <input type="file" accept=".pdf" onchange="loadPDF(this.files[0])">
+        <div class="dz-icon" id="iPDF">📄</div>
+        <h4>Drag &amp; drop or click</h4>
+        <div class="hint">Innovative_Tools_Price_List.pdf</div>
+        <div class="fname" id="nPDF"></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="gen-btn" id="genBtn" onclick="generate()">
+    ⚡ Generate All Price Lists — Excel + PDF Ready
+  </button>
+
+  <div class="prog" id="prog">
+    <div class="prog-top"><span class="prog-lbl" id="pLbl">Starting…</span><span class="prog-pct" id="pPct">0%</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="pFill" style="width:0%"></div></div>
+    <div class="prog-steps">
+      <div class="ps" id="ps0">📥 Load</div>
+      <div class="ps" id="ps1">📊 Excel</div>
+      <div class="ps" id="ps2">📄 PDF</div>
+      <div class="ps" id="ps3">📋 Build</div>
+      <div class="ps" id="ps4">✅ Done</div>
+    </div>
+  </div>
+
+  <div class="result" id="result">
+    <div class="result-top">
+      <div>
+        <div class="result-title">✅ Price Lists Ready</div>
+        <div class="result-sub" id="rSub"></div>
+      </div>
+      <div class="dl-row">
+        <button class="dl-btn dl-excel" onclick="dlExcel()">📊 Download Excel</button>
+        <button class="dl-btn dl-pdf-fs" onclick="showPDFModal('forspec')">📄 Forspec PDFs</button>
+        <button class="dl-btn dl-pdf-ita" onclick="showPDFModal('ita')">🔧 Innovative PDFs</button>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-n">205</div><div class="stat-l">Total Products</div></div>
+      <div class="stat-card"><div class="stat-n">14</div><div class="stat-l">Categories</div></div>
+      <div class="stat-card"><div class="stat-n">43</div><div class="stat-l">ITA Products</div></div>
+      <div class="stat-card"><div class="stat-n">9+2</div><div class="stat-l">PDF Variants</div></div>
+      <div class="stat-card"><div class="stat-n" id="sUpdated">0</div><div class="stat-l">Products Updated</div></div>
+    </div>
+
+    <div class="verify">
+      <h4>✔ Verification — FORZAFLEX BASE 3MM &amp; SUPER PRIME 008 (no tiers = blank)</h4>
+      <div class="vgrid" id="vgrid"></div>
+    </div>
+
+    <div class="sheets-row" id="shGrid"></div>
+
+    <div class="pv-wrap">
+      <div class="pv-toolbar">
+        <div class="pv-tb-top">
+          <span class="pv-title">Live Preview</span>
+          <div class="ctrl-grp">
+            <button class="tbtn gon" onclick="setGST('inc',this)">INC GST</button>
+            <button class="tbtn"     onclick="setGST('ex',this)">EX GST</button>
+          </div>
+          <div class="csep"></div>
+          <div class="ctrl-grp">
+            <button class="tbtn on" onclick="setTier('dist',this)">Distributor</button>
+            <button class="tbtn"    onclick="setTier('t1',this)">Tier 1</button>
+            <button class="tbtn"    onclick="setTier('t2',this)">Tier 2</button>
+            <button class="tbtn"    onclick="setTier('t3',this)">Tier 3</button>
+            <button class="tbtn"    onclick="setTier('gen',this)">General</button>
+          </div>
+          <span class="rcount" id="rCount">205 products</span>
+        </div>
+        <div class="pv-tb-bot">
+          <input class="search-box" type="text" id="searchBox" placeholder="🔍  Search product, GTIN, description…" oninput="renderPreview()">
+          <select class="cat-select" id="catSelect" onchange="renderPreview()">
+            <option value="">All Categories</option>
+            <option value="LIQUID APPLIED MEMBRANES">LIQUID APPLIED MEMBRANES</option><option value="SHEET APPLIED MEMBRANES">SHEET APPLIED MEMBRANES</option><option value="PRIMERS">PRIMERS</option><option value="SEALANTS AND TAPES">SEALANTS AND TAPES</option><option value="TOP COATS">TOP COATS</option><option value="TILE ADHESIVE">TILE ADHESIVE</option><option value="FLANGES">FLANGES</option><option value="CRACK INJECTION & CRACK REPAIRS">CRACK INJECTION & CRACK REPAIRS</option><option value="BELOW GROUND / WATERSTOPS">BELOW GROUND / WATERSTOPS</option><option value="CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS">CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS</option><option value="EPOXY FLOOR COATINGS">EPOXY FLOOR COATINGS</option><option value="TOOLS & ACCESSORIES">TOOLS & ACCESSORIES</option><option value="SHEET MEMBRANE ACCESSORIES">SHEET MEMBRANE ACCESSORIES</option><option value="FLOOD TESTING">FLOOD TESTING</option>
+          </select>
+        </div>
+      </div>
+      <div class="pv-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:115px">ITEM NO / GTIN</th>
+              <th style="min-width:155px">PRODUCT</th>
+              <th style="min-width:165px">DESCRIPTION</th>
+              <th style="width:64px">COLOUR</th>
+              <th style="width:74px">SIZE</th>
+              <th style="width:74px">PACKING</th>
+              <th class="r" style="width:62px">QTY/PALLET</th>
+              <th class="r" style="width:62px">BOXED QTY</th>
+              <th class="r" style="width:84px" id="thRRP">RRP</th>
+              <th class="r" style="width:84px" id="thDisc">DISCOUNTED</th>
+            </tr>
+          </thead>
+          <tbody id="pvBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PDF MODAL -->
+<div class="modal-overlay" id="pdfModal">
+  <div class="modal">
+    <h3 id="modalTitle">Export PDFs</h3>
+    <div class="modal-sub" id="modalSub">Select which price lists to export. Each opens in a new tab — use Ctrl+P → Save as PDF.</div>
+    <div class="modal-items" id="modalItems"></div>
+    <div class="modal-footer">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-go" id="modalGo" onclick="exportPDFs()">Export Selected</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──
+const ORIGINAL = [{"cat":"LIQUID APPLIED MEMBRANES","gtin":"9309000575237","product":"ACTFLEX 101 UV","desc":"UV STABLE WATER BASED CO POLYMER","colour":"GREY","size":"20kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":227.0,"dist_inc":165.0,"t1_inc":155.0,"t2_inc":155.0,"t3_inc":207.0,"gen_inc":null,"rrp_ex":206.36,"dist_ex":140.91,"t1_ex":140.91,"t2_ex":140.91,"t3_ex":188.18,"gen_ex":null},{"cat":"LIQUID APPLIED MEMBRANES","gtin":"9309000575060","product":"ACTFLEX 101 UV","desc":"UV STABLE WATER BASED CO POLYMER","colour":"WHITE","size":"20kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":227.0,"dist_inc":165.0,"t1_inc":160.0,"t2_inc":165.0,"t3_inc":180.0,"gen_inc":null,"rrp_ex":206.36,"dist_ex":131.82,"t1_ex":145.45,"t2_ex":154.55,"t3_ex":163.64,"gen_ex":null},{"cat":"LIQUID APPLIED MEMBRANES","gtin":"9309000575060","product":"ACTFLEX 400","desc":"CLEAR WATERPROOFING MEMBRANE","colour":"CLEAR","size":"7kg","packing":"BUCKET","qty_pallet":"48","boxed_qty":"~","rrp_inc":240.0,"dist_inc":168.0,"t1_inc":192.0,"t2_inc":200.0,"t3_inc":216.0,"gen_inc":null,"rrp_ex":54.55,"dist_ex":152.73,"t1_ex":43.64,"t2_ex":185.45,"t3_ex":196.36,"gen_ex":null},{"cat":"LIQUID APPLIED MEMBRANES","gtin":"9309000575060","product":"ACTFLEX 906 WPU","desc":"WATER BASED POLYURETHANE","colour":"GREY","size":"20kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":155.0,"dist_inc":100.0,"t1_inc":123.0,"t2_inc":126.0,"t3_inc":138.0,"gen_inc":null,"rrp_ex":140.91,"dist_ex":90.9,"t1_ex":111.82,"t2_ex":118.18,"t3_ex":125.45,"gen_ex":null},{"cat":"LIQUID APPLIED MEMBRANES","gtin":"93090005750631","product":"ACTFLEX 906 WPU","desc":"WATER BASED POLYURETHANE","colour":"GREY","size":"5kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":80.0,"dist_inc":50.0,"t1_inc":64.0,"t2_inc":70.0,"t3_inc":70.0,"gen_inc":null,"rrp_ex":72.73,"dist_ex":45.45,"t1_ex":58.18,"t2_ex":61.82,"t3_ex":63.64,"gen_ex":null},{"cat":"LIQUID APPLIED MEMBRANES","gtin":"93090005750641","product":"ACTFLEX 925 SFPU","desc":"SOLVENT FREE POLYURETHANE","colour":"GREY","size":"19.5kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":175.0,"dist_inc":125.0,"t1_inc":135.0,"t2_inc":155.0,"t3_inc":155.0,"gen_inc":null,"rrp_ex":159.09,"dist_ex":113.64,"t1_ex":122.73,"t2_ex":134.55,"t3_ex":140.91,"gen_ex":null},{"cat":"LIQUID APPLIED MEMBRANES","gtin":"93090005750ER","product":"ACTFLEX 929 HV","desc":"MOISTURE CURED POLYURETHANE NON-SLUMP","colour":"GREY","size":"20kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":175.0,"dist_inc":125.0,"t1_inc":135.0,"t2_inc":140.0,"t3_inc":155.0,"gen_inc":null,"rrp_ex":159.09,"dist_ex":113.64,"t1_ex":122.73,"t2_ex":134.55,"t3_ex":140.91,"gen_ex":null},{"cat":"LIQUID APPLIED MEMBRANES","gtin":"9309000575060","product":"ACTFLEX 929  SL","desc":"MOISTURE CURED POLYURETHANE SELF LEVELLING","colour":"GREY","size":"20kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":175.0,"dist_inc":125.0,"t1_inc":135.0,"t2_inc":140.0,"t3_inc":155.0,"gen_inc":null,"rrp_ex":159.09,"dist_ex":113.64,"t1_ex":122.73,"t2_ex":134.55,"t3_ex":140.91,"gen_ex":null},{"cat":"LIQUID APPLIED MEMBRANES","gtin":"93090005750651","product":"ACTFLEX 988 CWP 10kg","desc":"2 PART CEMENTITIOUS WATERPROOFING","colour":"KHAKI GREY","size":"10kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":140.0,"dist_inc":80.0,"t1_inc":112.0,"t2_inc":90.0,"t3_inc":126.0,"gen_inc":null,"rrp_ex":127.27,"dist_ex":72.73,"t1_ex":101.82,"t2_ex":108.18,"t3_ex":114.55,"gen_ex":null},{"cat":"LIQUID APPLIED MEMBRANES","gtin":"9309000575060","product":"ACTFLEX 988 CWP 20kg","desc":"2 PART CEMENTITIOUS WATERPROOFING","colour":"KHAKI GREY","size":"20kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":200.0,"dist_inc":145.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":null,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"LIQUID APPLIED MEMBRANES","gtin":"9309002415340","product":"ACTFLEX 989 CWP - CLASS III","desc":"CLASS III -2 PART CEMENTITIOUS","colour":"KHAKI GREY","size":"18kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":200.0,"dist_inc":145.0,"t1_inc":160.0,"t2_inc":165.0,"t3_inc":180.0,"gen_inc":null,"rrp_ex":181.82,"dist_ex":131.82,"t1_ex":145.46,"t2_ex":154.55,"t3_ex":163.64,"gen_ex":null},{"cat":"SHEET APPLIED MEMBRANES","gtin":"9309004048454","product":"FORZAFLEX BASE 3MM","desc":"TORCH APPLIED WATERPROOFING MEMBRANE","colour":"BLACK","size":"10m x  1m","packing":"ROLL","qty_pallet":"25","boxed_qty":"-","rrp_inc":165.0,"dist_inc":115.5,"t1_inc":132.0,"t2_inc":140.25,"t3_inc":148.5,"gen_inc":null,"rrp_ex":150.0,"dist_ex":105.0,"t1_ex":120.0,"t2_ex":127.5,"t3_ex":135.0,"gen_ex":null},{"cat":"SHEET APPLIED MEMBRANES","gtin":"9309004048461","product":"FORZAFLEX MINERLE 4.5","desc":"MINERAL CAP SHEET MEMBRANE","colour":"BLACK","size":"10m x  1m","packing":"ROLL","qty_pallet":"23","boxed_qty":"-","rrp_inc":190.0,"dist_inc":133.0,"t1_inc":152.0,"t2_inc":161.5,"t3_inc":171.0,"gen_inc":null,"rrp_ex":172.73,"dist_ex":120.91,"t1_ex":138.18,"t2_ex":146.82,"t3_ex":155.45,"gen_ex":null},{"cat":"SHEET APPLIED MEMBRANES","gtin":"9309004048478","product":"FORZAFLEX RR","desc":"ROOT RESISTANT WATERPROOFING MEMBRANE","colour":"BLACK","size":"10m x  1m","packing":"ROLL","qty_pallet":"20","boxed_qty":"-","rrp_inc":200.0,"dist_inc":140.0,"t1_inc":160.0,"t2_inc":170.0,"t3_inc":180.0,"gen_inc":null,"rrp_ex":181.82,"dist_ex":127.27,"t1_ex":145.46,"t2_ex":154.55,"t3_ex":163.64,"gen_ex":null},{"cat":"SHEET APPLIED MEMBRANES","gtin":"9309000575572","product":"ACTFLEX 900S","desc":"SELF ADHESIVE EPDM","colour":"GREY","size":"1.2m X 20m","packing":"ROLL","qty_pallet":"16","boxed_qty":"~","rrp_inc":1300.0,"dist_inc":900.0,"t1_inc":1040.0,"t2_inc":1105.0,"t3_inc":1170.0,"gen_inc":null,"rrp_ex":1181.82,"dist_ex":818.18,"t1_ex":945.46,"t2_ex":1004.55,"t3_ex":1063.64,"gen_ex":null},{"cat":"SHEET APPLIED MEMBRANES","gtin":"9309000575589","product":"ACTFLEX 900 SD","desc":"DETAIL ROLL","colour":"GREY","size":"250mm X 20m","packing":"ROLL","qty_pallet":"24","boxed_qty":"~","rrp_inc":450.0,"dist_inc":285.0,"t1_inc":360.0,"t2_inc":382.0,"t3_inc":405.0,"gen_inc":null,"rrp_ex":409.09,"dist_ex":259.09,"t1_ex":327.27,"t2_ex":347.27,"t3_ex":368.18,"gen_ex":null},{"cat":"SHEET APPLIED MEMBRANES","gtin":"9309002415043","product":"ACTFLEX 5000","desc":"SELF ADHESIVE HDPE SHEET MEMBRANE","colour":"BLUE","size":"1m X 20m","packing":"ROLL","qty_pallet":"25","boxed_qty":"~","rrp_inc":550.0,"dist_inc":360.0,"t1_inc":440.0,"t2_inc":467.0,"t3_inc":495.0,"gen_inc":null,"rrp_ex":500.0,"dist_ex":327.27,"t1_ex":400.0,"t2_ex":424.55,"t3_ex":450.0,"gen_ex":null},{"cat":"SHEET APPLIED MEMBRANES","gtin":"9309002415463","product":"ACTFLEX 5000S","desc":"REACTIVE SANDED SHEET MEMBRANE","colour":"DARK RED","size":"1m X 20m","packing":"ROLL","qty_pallet":"25","boxed_qty":"~","rrp_inc":700.0,"dist_inc":480.0,"t1_inc":560.0,"t2_inc":595.0,"t3_inc":630.0,"gen_inc":null,"rrp_ex":636.36,"dist_ex":436.36,"t1_ex":509.09,"t2_ex":540.91,"t3_ex":572.73,"gen_ex":null},{"cat":"SHEET APPLIED MEMBRANES","gtin":"9309002415067","product":"PREFLEX 3000","desc":"HDPE FULLY PRE APPLIED SHEET MEMBRANE","colour":"LIGHT GREY","size":"1m X 20m","packing":"ROLL","qty_pallet":"16","boxed_qty":"~","rrp_inc":800.0,"dist_inc":500.0,"t1_inc":640.0,"t2_inc":680.0,"t3_inc":720.0,"gen_inc":null,"rrp_ex":727.27,"dist_ex":454.55,"t1_ex":581.82,"t2_ex":618.18,"t3_ex":654.55,"gen_ex":null},{"cat":"SHEET APPLIED MEMBRANES","gtin":"9309002415074","product":"PREFLEX 3000 S","desc":"PRE APPLIED DETAIL TAPE SANDED","colour":"LIGHT GREY","size":"120mm X 20m","packing":"ROLL","qty_pallet":"32","boxed_qty":"~","rrp_inc":160.0,"dist_inc":100.0,"t1_inc":null,"t2_inc":136.0,"t3_inc":144.0,"gen_inc":null,"rrp_ex":145.45,"dist_ex":90.91,"t1_ex":null,"t2_ex":123.64,"t3_ex":130.91,"gen_ex":null},{"cat":"SHEET APPLIED MEMBRANES","gtin":"9309002415081","product":"PREFLEX 3000 NS","desc":"PRE APPLIED DETAIL TAPE DOUBLE SIDED","colour":"CLEAR","size":"80mm X 20m","packing":"ROLL","qty_pallet":"32","boxed_qty":"~","rrp_inc":140.0,"dist_inc":80.0,"t1_inc":100.0,"t2_inc":119.0,"t3_inc":126.0,"gen_inc":null,"rrp_ex":127.27,"dist_ex":72.73,"t1_ex":90.91,"t2_ex":108.18,"t3_ex":114.55,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309004048614","product":"ACTFLEX SUPER PRIME 008","desc":"FAST DRYING SOLVENT BASED PRIMER","colour":"CLEAR","size":"250ML","packing":"BOTTLE","qty_pallet":"~","boxed_qty":"6","rrp_inc":70.0,"dist_inc":null,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":63.64,"dist_ex":44.55,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309004048621","product":"ACTFLEX SUPER BOND 007","desc":"MOISTURE REACTIVE SOLVENT BASED PRIMER","colour":"CLEAR","size":"250ML","packing":"BOTTLE","qty_pallet":"~","boxed_qty":"6","rrp_inc":70.0,"dist_inc":null,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":63.64,"dist_ex":44.55,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309004048485","product":"FORZAPRIME","desc":"BITUMINOUS PRIMER","colour":"CLEAR","size":"20KG","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":240.0,"dist_inc":168.0,"t1_inc":192.0,"t2_inc":204.0,"t3_inc":216.0,"gen_inc":null,"rrp_ex":218.18,"dist_ex":152.73,"t1_ex":174.54,"t2_ex":185.45,"t3_ex":196.36,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309004048003","product":"ACTFLEX 300 PRIMER 5L","desc":"PRIMER FOR BUTYL SERIES SHEET MEMBRANE","colour":"WHITE","size":"5L","packing":"BUCKET","qty_pallet":"54","boxed_qty":"~","rrp_inc":80.0,"dist_inc":56.0,"t1_inc":64.0,"t2_inc":68.0,"t3_inc":72.0,"gen_inc":null,"rrp_ex":72.73,"dist_ex":50.91,"t1_ex":58.18,"t2_ex":61.82,"t3_ex":65.45,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309002415999","product":"ACTFLEX MB200 5KG","desc":"MOISTURE BARRIER POLYURETHANE PRIMER","colour":"YELLOW","size":"5KG","packing":"BAG","qty_pallet":"64","boxed_qty":"~","rrp_inc":160.0,"dist_inc":112.0,"t1_inc":128.0,"t2_inc":136.0,"t3_inc":144.0,"gen_inc":null,"rrp_ex":145.45,"dist_ex":101.82,"t1_ex":116.36,"t2_ex":123.64,"t3_ex":130.91,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309000575145","product":"ACTFLEX EP 250 20LT KIT","desc":"HYDROSTATIC EPOXY PRIMER","colour":"LIGHT GREY","size":"20L","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":380.0,"dist_inc":305.0,"t1_inc":320.0,"t2_inc":328.0,"t3_inc":365.0,"gen_inc":null,"rrp_ex":345.45,"dist_ex":277.27,"t1_ex":290.91,"t2_ex":293.64,"t3_ex":310.91,"gen_ex":null},{"cat":"PRIMERS","gtin":"930900575169","product":"ACTFLEX EP 250 4LT KIT","desc":"HYDROSTATIC EPOXY PRIMER","colour":"LIGHT GREY","size":"4L","packing":"BUCKET","qty_pallet":"54","boxed_qty":"~","rrp_inc":150.0,"dist_inc":95.0,"t1_inc":112.0,"t2_inc":119.0,"t3_inc":125.0,"gen_inc":null,"rrp_ex":136.36,"dist_ex":86.36,"t1_ex":101.82,"t2_ex":108.18,"t3_ex":113.64,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309000575060","product":"ACTFLEX 600 PRIMER","desc":"HYBRID BASED PRIMER","colour":"CREAM","size":"17L","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":231.0,"dist_inc":154.0,"t1_inc":175.0,"t2_inc":187.0,"t3_inc":198.0,"gen_inc":null,"rrp_ex":210.0,"dist_ex":140.0,"t1_ex":159.09,"t2_ex":170.0,"t3_ex":180.0,"gen_ex":null},{"cat":"PRIMERS","gtin":"93090005750621","product":"ACTFLEX 600 PRIMER 4LT","desc":"HYBRID BASED PRIMER","colour":"CREAM","size":"4L","packing":"BUCKET","qty_pallet":"54","boxed_qty":"~","rrp_inc":80.0,"dist_inc":56.0,"t1_inc":64.0,"t2_inc":68.0,"t3_inc":72.0,"gen_inc":null,"rrp_ex":72.73,"dist_ex":50.91,"t1_ex":58.18,"t2_ex":61.82,"t3_ex":65.45,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309000575060","product":"ACTFLEX 700 PU PRIMER 17LT","desc":"SOLVENT BASED PRIMER","colour":"CLEAR","size":"17L","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":230.0,"dist_inc":163.0,"t1_inc":185.0,"t2_inc":195.0,"t3_inc":205.0,"gen_inc":null,"rrp_ex":209.09,"dist_ex":148.18,"t1_ex":168.18,"t2_ex":177.27,"t3_ex":186.36,"gen_ex":null},{"cat":"PRIMERS","gtin":"93090005750622","product":"ACTFLEX 700 PU PRIMER 4LT","desc":"SOLVENT BASED PRIMER","colour":"CLEAR","size":"4L","packing":"BUCKET","qty_pallet":"54","boxed_qty":"~","rrp_inc":80.0,"dist_inc":55.0,"t1_inc":64.0,"t2_inc":68.0,"t3_inc":72.0,"gen_inc":null,"rrp_ex":72.73,"dist_ex":50.0,"t1_ex":58.18,"t2_ex":61.82,"t3_ex":65.45,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309000575619","product":"ACTFLEX 500 NP PRIMER","desc":"WATERBASE NON POROUS PRIMER","colour":"WHITE","size":"15L","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":160.0,"dist_inc":112.0,"t1_inc":128.0,"t2_inc":136.0,"t3_inc":144.0,"gen_inc":null,"rrp_ex":145.45,"dist_ex":101.82,"t1_ex":116.36,"t2_ex":123.64,"t3_ex":130.91,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309000575626","product":"ACTFLEX 500 NP PRIMER","desc":"WATERBASE NON POROUS PRIMER","colour":"WHITE","size":"5L","packing":"BUCKET","qty_pallet":"54","boxed_qty":"~","rrp_inc":100.0,"dist_inc":70.0,"t1_inc":65.0,"t2_inc":85.0,"t3_inc":90.0,"gen_inc":null,"rrp_ex":90.91,"dist_ex":63.64,"t1_ex":59.09,"t2_ex":77.27,"t3_ex":81.82,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309000575619","product":"ACTFLEX SUPER PRIME 008","desc":"HYBRID PVC PRIMER","colour":"CLEAR","size":"1L","packing":"BUCKET","qty_pallet":"~","boxed_qty":"6","rrp_inc":150.0,"dist_inc":105.0,"t1_inc":110.0,"t2_inc":128.0,"t3_inc":null,"gen_inc":null,"rrp_ex":136.36,"dist_ex":95.45,"t1_ex":100.0,"t2_ex":116.36,"t3_ex":122.73,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309000575541","product":"ACTFLEX SUPER BOND 007","desc":"SOLVENT PVC PRIMER","colour":"CLEAR","size":"1L","packing":"BUCKET","qty_pallet":"~","boxed_qty":"6","rrp_inc":150.0,"dist_inc":105.0,"t1_inc":110.0,"t2_inc":128.0,"t3_inc":null,"gen_inc":null,"rrp_ex":136.36,"dist_ex":95.45,"t1_ex":100.0,"t2_ex":116.36,"t3_ex":122.73,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309002415050","product":"ACTFLEX 300 PRIMER","desc":"PRIMER FOR BUTYL SERIES SHEET MEMBRANE","colour":"WHITE","size":"15L","packing":"BUCKET","qty_pallet":"36","boxed_qty":"$","rrp_inc":250.0,"dist_inc":175.0,"t1_inc":200.0,"t2_inc":212.0,"t3_inc":225.0,"gen_inc":null,"rrp_ex":227.27,"dist_ex":159.09,"t1_ex":181.82,"t2_ex":192.73,"t3_ex":204.55,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309002415906","product":"ACTFLEX MB200","desc":"MOISTURE BARRIER POLYURETHANE PRIMER","colour":"20kg","size":"BAG","packing":"64","qty_pallet":"$","boxed_qty":"440.00","rrp_inc":440.0,"dist_inc":350.0,"t1_inc":390.0,"t2_inc":410.0,"t3_inc":420.0,"gen_inc":null,"rrp_ex":400.0,"dist_ex":318.18,"t1_ex":354.55,"t2_ex":318.18,"t3_ex":318.18,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309002415913","product":"ACTFLEX 200","desc":"HIGH ADHESION WATERBASE PRIMER","colour":"BLUE","size":"15L","packing":"BUCKET","qty_pallet":"~","boxed_qty":"~","rrp_inc":120.0,"dist_inc":65.0,"t1_inc":90.0,"t2_inc":96.0,"t3_inc":108.0,"gen_inc":null,"rrp_ex":109.09,"dist_ex":58.5,"t1_ex":81.82,"t2_ex":87.27,"t3_ex":98.18,"gen_ex":null},{"cat":"PRIMERS","gtin":"9309002415920","product":"ACTFLEX 200","desc":"HIGH ADHESION WATERBASE PRIMER","colour":"BLUE","size":"15L","packing":"BUCKET","qty_pallet":"~","boxed_qty":"~","rrp_inc":60.0,"dist_inc":30.0,"t1_inc":45.0,"t2_inc":48.0,"t3_inc":54.0,"gen_inc":null,"rrp_ex":54.55,"dist_ex":27.27,"t1_ex":40.91,"t2_ex":43.64,"t3_ex":49.1,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309000575206","product":"ACTFLEX 75FC","desc":"POLYURETHANE JOINT SEALANT","colour":"GREY","size":"600ML","packing":"TUBE","qty_pallet":"40 Boxes","boxed_qty":"20","rrp_inc":260.0,"dist_inc":150.0,"t1_inc":180.0,"t2_inc":200.0,"t3_inc":200.0,"gen_inc":null,"rrp_ex":236.36,"dist_ex":136.36,"t1_ex":163.63,"t2_ex":181.82,"t3_ex":181.82,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309000575756","product":"ACTFLEX MS PRO","desc":"MODIFIED POLYURETHANE SEALANT","colour":"WHITE","size":"600ML","packing":"TUBE","qty_pallet":"40 Boxes","boxed_qty":"20","rrp_inc":260.0,"dist_inc":150.0,"t1_inc":180.0,"t2_inc":200.0,"t3_inc":200.0,"gen_inc":null,"rrp_ex":236.36,"dist_ex":136.36,"t1_ex":163.63,"t2_ex":181.82,"t3_ex":181.82,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"273115","product":"AT-MESH (DETAIL)","desc":"WOVEN POLYESTER WATERPROOFING MESH TAPE","colour":"WHITE","size":"150MMX100M","packing":"ROLL","qty_pallet":"144","boxed_qty":"20","rrp_inc":70.0,"dist_inc":40.0,"t1_inc":56.0,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":63.64,"dist_ex":36.36,"t1_ex":50.91,"t2_ex":36.36,"t3_ex":36.36,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"273116","product":"AT-MESH","desc":"WOVEN POLYESTER WATERPROOFING MESH TAPE","colour":"WHITE","size":"1MX50M","packing":"ROLL","qty_pallet":"144","boxed_qty":"20","rrp_inc":120.0,"dist_inc":84.0,"t1_inc":96.0,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":76.36,"t1_ex":87.27,"t2_ex":92.73,"t3_ex":98.18,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309002415678","product":"ACTFLEX SA TAPE 100mm x 10m","desc":"SELF-ADHESIVE BUTYNOL\u00a0 JOINT TAPE","colour":"WHITE","size":"100mm x 10m","packing":"ROLL","qty_pallet":"144","boxed_qty":"8","rrp_inc":42.0,"dist_inc":28.0,"t1_inc":32.0,"t2_inc":34.0,"t3_inc":36.0,"gen_inc":null,"rrp_ex":38.18,"dist_ex":25.45,"t1_ex":29.09,"t2_ex":30.91,"t3_ex":32.73,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309002415685","product":"ACTFLEX SA TAPE 150mm x 10m","desc":"SELF-ADHESIVE BUTYNOL\u00a0 JOINT TAPE","colour":"WHITE","size":"150mm x 10m","packing":"ROLL","qty_pallet":"144","boxed_qty":"8","rrp_inc":84.0,"dist_inc":56.0,"t1_inc":64.0,"t2_inc":68.0,"t3_inc":72.0,"gen_inc":null,"rrp_ex":76.36,"dist_ex":50.91,"t1_ex":58.18,"t2_ex":61.82,"t3_ex":65.45,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309002415654","product":"ACTFLEX FLEXTAPE 120mm x 20m","desc":"FLEXIBLE PU-COATED FABRIC TAPE","colour":"BLUE","size":"120mm x 20m","packing":"ROLL","qty_pallet":"144","boxed_qty":"8","rrp_inc":53.0,"dist_inc":35.0,"t1_inc":40.0,"t2_inc":42.0,"t3_inc":45.0,"gen_inc":null,"rrp_ex":48.18,"dist_ex":31.82,"t1_ex":36.36,"t2_ex":38.18,"t3_ex":40.91,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309002415661","product":"ACTFLEX MESHTAPE 120mm x 20m","desc":"REINFORCING BOND BREAKER MESH TAPE","colour":"BLUE","size":"120mm x 20m","packing":"ROLL","qty_pallet":"144","boxed_qty":"8","rrp_inc":73.0,"dist_inc":49.0,"t1_inc":56.0,"t2_inc":59.0,"t3_inc":63.0,"gen_inc":null,"rrp_ex":66.36,"dist_ex":44.55,"t1_ex":50.91,"t2_ex":53.64,"t3_ex":57.27,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309002415647","product":"SUPERFLEX Joint Tape 150mm x 50m","desc":"HEAVY-DUTY TPE-LINED TAPE","colour":"BLUE","size":"150mm x 50m","packing":"ROLL","qty_pallet":"144","boxed_qty":"8","rrp_inc":150.0,"dist_inc":105.0,"t1_inc":120.0,"t2_inc":127.0,"t3_inc":135.0,"gen_inc":null,"rrp_ex":136.36,"dist_ex":95.45,"t1_ex":109.09,"t2_ex":115.45,"t3_ex":122.73,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309002415692","product":"SUPERFLEX Collars 12/12cm","desc":"PREFORMED TPE TAP COLLARS","colour":"BLUE","size":"12cm/12cm","packing":"ROLL","qty_pallet":"144","boxed_qty":"8","rrp_inc":10.0,"dist_inc":7.0,"t1_inc":8.0,"t2_inc":null,"t3_inc":9.0,"gen_inc":null,"rrp_ex":9.09,"dist_ex":6.36,"t1_ex":7.27,"t2_ex":7.73,"t3_ex":8.18,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309002415623","product":"EXPANDOFLEX\u00a0 Expansion Tape 250mm x 25m","desc":"THERMOPLASTIC ELASTOMER-BASED EXPANSION JOINT TAPE","colour":"GREY","size":"250mm x 25m","packing":"ROLL","qty_pallet":"144","boxed_qty":"8","rrp_inc":450.0,"dist_inc":315.0,"t1_inc":360.0,"t2_inc":382.0,"t3_inc":405.0,"gen_inc":null,"rrp_ex":409.09,"dist_ex":286.36,"t1_ex":327.27,"t2_ex":347.27,"t3_ex":368.18,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309002415616","product":"EXPANDOFLEX Expansion Tape 150mm x 25m","desc":"THERMOPLASTIC ELASTOMER-BASED EXPANSION JOINT TAPE","colour":"GREY","size":"150mm x 25m","packing":"ROLL","qty_pallet":"144","boxed_qty":"8","rrp_inc":300.0,"dist_inc":210.0,"t1_inc":240.0,"t2_inc":255.0,"t3_inc":270.0,"gen_inc":null,"rrp_ex":272.73,"dist_ex":190.91,"t1_ex":218.18,"t2_ex":231.82,"t3_ex":245.45,"gen_ex":null},{"cat":"SEALANTS AND TAPES","gtin":"9309002415630","product":"EXPANDOFLEX FT Expansion Tape 250mm x 25m","desc":"THERMOPLASTIC ELASTOMER-BASED EXPANSION JOINT TAPE","colour":"GREY","size":"250mm x 25m","packing":"ROLL","qty_pallet":"144","boxed_qty":"8","rrp_inc":500.0,"dist_inc":350.0,"t1_inc":400.0,"t2_inc":425.0,"t3_inc":450.0,"gen_inc":null,"rrp_ex":454.55,"dist_ex":318.18,"t1_ex":363.64,"t2_ex":386.36,"t3_ex":409.09,"gen_ex":null},{"cat":"TOP COATS","gtin":"9309004048539","product":"ACTFLEX ULTRA TC 40KG KIT","desc":"SINGLE PART UV TOP COAT","colour":"GREY","size":"40KG KIT","packing":"BUCKET","qty_pallet":"16","boxed_qty":"~","rrp_inc":1200.0,"dist_inc":840.0,"t1_inc":960.0,"t2_inc":1020.0,"t3_inc":1080.0,"gen_inc":null,"rrp_ex":1090.91,"dist_ex":763.64,"t1_ex":872.73,"t2_ex":927.27,"t3_ex":981.82,"gen_ex":763.64},{"cat":"TOP COATS","gtin":"112PAOPF45O0010","product":"ACTFLEX ULTRA FC","desc":"2 COMPONENT UV TOP COAT","colour":"MID GREY","size":"20L KIT","packing":"BUCKET","qty_pallet":"24","boxed_qty":"~","rrp_inc":1100.0,"dist_inc":850.0,"t1_inc":880.0,"t2_inc":935.0,"t3_inc":990.0,"gen_inc":null,"rrp_ex":1000.0,"dist_ex":772.73,"t1_ex":800.0,"t2_ex":850.0,"t3_ex":900.0,"gen_ex":null},{"cat":"TOP COATS","gtin":"112PAOPF45A020","product":"ACTFLEX ULTRA FC","desc":"2 COMPONENT UV TOP COAT","colour":"MID GREY","size":"40L KIT","packing":"BUCKET","qty_pallet":"16","boxed_qty":"~","rrp_inc":1900.0,"dist_inc":1550.0,"t1_inc":1550.0,"t2_inc":1615.0,"t3_inc":1710.0,"gen_inc":null,"rrp_ex":1727.27,"dist_ex":1409.09,"t1_ex":1409.09,"t2_ex":1468.18,"t3_ex":1554.55,"gen_ex":null},{"cat":"TOP COATS","gtin":"112PAOPF45A004","product":"ACTFLEX ULTRA FC","desc":"2 COMPONENT UV TOP COAT","colour":"MID GREY","size":"10L KIT","packing":"BUCKET","qty_pallet":"54","boxed_qty":"~","rrp_inc":600.0,"dist_inc":455.0,"t1_inc":480.0,"t2_inc":510.0,"t3_inc":540.0,"gen_inc":null,"rrp_ex":545.45,"dist_ex":413.64,"t1_ex":436.36,"t2_ex":463.64,"t3_ex":490.91,"gen_ex":null},{"cat":"TOP COATS","gtin":"XPC23-2814IGREY","product":"ACTFLEX ATC","desc":"SINGLE PART UV TOP COAT","colour":"PIPELINE GREY","size":"18kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":600.0,"dist_inc":420.0,"t1_inc":440.0,"t2_inc":470.0,"t3_inc":490.0,"gen_inc":null,"rrp_ex":545.0,"dist_ex":381.82,"t1_ex":399.67,"t2_ex":427.27,"t3_ex":445.45,"gen_ex":null},{"cat":"TILE ADHESIVE","gtin":"9309004048508","product":"ACTFLEX BIOSET","desc":"PROTECTIVE COATINGS","colour":"WHITE","size":"20KG","packing":"BOX","qty_pallet":"-","boxed_qty":"$","rrp_inc":24.0,"dist_inc":18.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":18.0,"rrp_ex":21.82,"dist_ex":16.36,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":16.36},{"cat":"FLANGES","gtin":"LC100C","product":"ALLPROOF 100MM LEAK CONTROL FLANGE","desc":"LEAK CONTROL FLANGE","colour":"WHITE","size":"100MM","packing":"-","qty_pallet":"450","boxed_qty":"36","rrp_inc":10.0,"dist_inc":null,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":9.09,"dist_ex":7.73,"t1_ex":null,"t2_ex":7.73,"t3_ex":7.73,"gen_ex":null},{"cat":"FLANGES","gtin":"000265665","product":"PUDDLE PRO 100MM PUDDLE FLANGE","desc":"ABS PLASTIC 100MM PUDDLE FLANGE","colour":"WHITE","size":"100MM","packing":"BOX","qty_pallet":"60","boxed_qty":"$","rrp_inc":15.0,"dist_inc":null,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":13.64,"dist_ex":9.55,"t1_ex":null,"t2_ex":9.55,"t3_ex":9.55,"gen_ex":null},{"cat":"FLANGES","gtin":"000265664","product":"PUDDLE PRO 90MM PUDDLE FLANGE","desc":"ABS PLASTIC 90MM ON TOP OF SCREED PUDDLE FLANGE","colour":"WHITE","size":"90MM","packing":"BOX","qty_pallet":"48","boxed_qty":"$","rrp_inc":15.0,"dist_inc":null,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":13.64,"dist_ex":9.55,"t1_ex":null,"t2_ex":9.55,"t3_ex":9.55,"gen_ex":null},{"cat":"FLANGES","gtin":"10200","product":"ACTNOW 100MM RUBBER PUDDLE FLANGE","desc":"100MM RUBBER PUDDLE FLANGE - CONCRETE ONLY","colour":"BLACK","size":"100MM","packing":"BOX","qty_pallet":"100","boxed_qty":"$","rrp_inc":12.0,"dist_inc":null,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":10.91,"dist_ex":8.18,"t1_ex":null,"t2_ex":8.18,"t3_ex":8.18,"gen_ex":null},{"cat":"FLANGES","gtin":"102001","product":"ACTNOW 100MM RUBBER FLOOD TEST FLANGE","desc":"100MM FLOOD TESTING RUBBER PUDDLE FLANGE - CONCRETE ONLY","colour":"BLACK","size":"100MM","packing":"BOX","qty_pallet":"100","boxed_qty":"$","rrp_inc":13.0,"dist_inc":null,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":11.82,"dist_ex":9.09,"t1_ex":null,"t2_ex":9.09,"t3_ex":9.09,"gen_ex":null},{"cat":"FLANGES","gtin":"LC100C","product":"FLANGE ALLPROOF PVC LEAK CONTROL 100MM","desc":"PVC PLASTIC 100MM LEAK CONTROL FLANGE","colour":"WHITE","size":"100MM","packing":"BOX","qty_pallet":"36","boxed_qty":"$","rrp_inc":10.0,"dist_inc":null,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":null,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415487","product":"INJECTION HYDRAULIC GREASE NIPPLES 10PK","desc":"REPLACEMENT COUPLER HEADS","colour":"~","size":"10 PACK","packing":"PACK","qty_pallet":"~","boxed_qty":"10","rrp_inc":150.0,"dist_inc":105.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":136.36,"dist_ex":95.45,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309000575640","product":"FORSPEC PROBOND 1100PS","desc":"NON SAG EPOXY PASTE","colour":"GREY","size":"600ML","packing":"DUAL TUBE","qty_pallet":"~","boxed_qty":"12","rrp_inc":100.0,"dist_inc":70.0,"t1_inc":80.0,"t2_inc":80.0,"t3_inc":80.0,"gen_inc":null,"rrp_ex":90.91,"dist_ex":63.64,"t1_ex":72.73,"t2_ex":72.73,"t3_ex":72.73,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309000575671","product":"FORSPEC CRACK LOCK E400L","desc":"ULTRA LOW VISCOSITY EPOXY","colour":"CLEAR","size":"400ML","packing":"DUAL TUBE","qty_pallet":"~","boxed_qty":"12","rrp_inc":100.0,"dist_inc":70.0,"t1_inc":80.0,"t2_inc":80.0,"t3_inc":80.0,"gen_inc":null,"rrp_ex":90.91,"dist_ex":63.64,"t1_ex":72.73,"t2_ex":72.73,"t3_ex":72.73,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309000575664","product":"FORSPEC CRACKSWELL PU100","desc":"HIGH EXPANDING FOAM EPOXY","colour":"CLEAR","size":"600ML","packing":"DUAL TUBE","qty_pallet":"~","boxed_qty":"12","rrp_inc":100.0,"dist_inc":70.0,"t1_inc":80.0,"t2_inc":80.0,"t3_inc":80.0,"gen_inc":null,"rrp_ex":90.91,"dist_ex":63.64,"t1_ex":72.73,"t2_ex":72.73,"t3_ex":72.73,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309000575688","product":"FORSPEC CRACK PRO 1200PS","desc":"MEDIUM VISCOSITY EPOXY","colour":"CLEAR","size":"600ML","packing":"DUAL TUBE","qty_pallet":"~","boxed_qty":"12","rrp_inc":100.0,"dist_inc":70.0,"t1_inc":80.0,"t2_inc":80.0,"t3_inc":80.0,"gen_inc":null,"rrp_ex":90.91,"dist_ex":63.64,"t1_ex":72.73,"t2_ex":72.73,"t3_ex":72.73,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415371","product":"PROBOND 1100 10kg","desc":"2 PART EPOXY ADHESIVE","colour":"~","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"95","rrp_inc":250.0,"dist_inc":175.0,"t1_inc":200.0,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":227.27,"dist_ex":159.09,"t1_ex":181.82,"t2_ex":181.82,"t3_ex":null,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415272","product":"INJECTION HANDLE SWM","desc":"INJECTION HANDLE","colour":"~","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":150.0,"dist_inc":105.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":136.36,"dist_ex":95.45,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415289","product":"INJECTION HOSE EXTENSION SWM","desc":"INJECTION HOSE EXTENSION","colour":"~","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":100.0,"dist_inc":70.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":90.91,"dist_ex":63.64,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415265","product":"INJECTION HOSE SWM","desc":"INJECTION HOSE","colour":"~","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":150.0,"dist_inc":105.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":136.36,"dist_ex":95.45,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"000000659897","product":"INJECTION MACHINE SWM 1300","desc":"INJECTION MACHINE 650W","colour":"~","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":2000.0,"dist_inc":1600.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":1818.18,"dist_ex":1454.55,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"00000455422","product":"INJECTION MACHINE SWM 1500","desc":"INJECTION MACHINE 750W","colour":"~","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":3400.0,"dist_inc":3000.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":3090.91,"dist_ex":2727.27,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415494","product":"INJECTION NIPPLE 10CM 50PCK","desc":"INJECTION NIPPLE","colour":"~","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":85.0,"dist_inc":55.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":77.27,"dist_ex":50.0,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309000575817","product":"INJECTION NIPPLE 13CM 50PCK","desc":"INJECTION NIPPLE 100MM X 13MM","colour":"~","size":"13MM","packing":"50 Pack","qty_pallet":"50","boxed_qty":"$","rrp_inc":100.0,"dist_inc":70.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":90.91,"dist_ex":63.64,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415241","product":"ACTFLEX PU200 HYDROPHOBIC","desc":"HIGH-FLOW POLYURETHANE FOAM","colour":"20kg","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"$","rrp_inc":500.0,"dist_inc":350.0,"t1_inc":null,"t2_inc":null,"t3_inc":450.0,"gen_inc":null,"rrp_ex":454.55,"dist_ex":295.46,"t1_ex":null,"t2_ex":null,"t3_ex":409.1,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415227","product":"ACTFLEX PU300 KIT INC ACCELERATOR","desc":"HIGH-FLOW POLYURETHANE FOAM WITH ACCELERATOR","colour":"20kg","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"$","rrp_inc":580.0,"dist_inc":406.0,"t1_inc":null,"t2_inc":null,"t3_inc":522.0,"gen_inc":null,"rrp_ex":527.27,"dist_ex":342.73,"t1_ex":null,"t2_ex":null,"t3_ex":474.54,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415234","product":"ACTFLEX PU300 ACCELERATOR","desc":"ACCELERATOR","colour":"2kg","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"$","rrp_inc":80.0,"dist_inc":56.0,"t1_inc":null,"t2_inc":null,"t3_inc":72.0,"gen_inc":null,"rrp_ex":72.73,"dist_ex":47.27,"t1_ex":null,"t2_ex":null,"t3_ex":65.46,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415258","product":"ACTFLEX PU500 HYDROPHILIC","desc":"HIGH-FLOW ABSORBING FLEXIBLE POLYURETHANE","colour":"20kg","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"$","rrp_inc":500.0,"dist_inc":350.0,"t1_inc":null,"t2_inc":null,"t3_inc":450.0,"gen_inc":null,"rrp_ex":454.55,"dist_ex":295.46,"t1_ex":null,"t2_ex":null,"t3_ex":409.1,"gen_ex":null},{"cat":"CRACK INJECTION & CRACK REPAIRS","gtin":"9309002415951","product":"ACTFLEX ER 300","desc":"2-COMPONENT LOW-VISCOSITY EPOXY","colour":"15kg Kit","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"$","rrp_inc":500.0,"dist_inc":380.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":454.55,"dist_ex":345.45,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309002415302","product":"PREBAR EXTERNAL PVC WATERSTOP","desc":"PVC WATERSTOP","colour":"BLUE","size":"12.5X 250MM","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":310.0,"dist_inc":210.0,"t1_inc":240.0,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":281.81,"dist_ex":null,"t1_ex":218.18,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309002415319","product":"PREBAR EXTERNAL PVC WATERSTOP","desc":"PVC WATERSTOP","colour":"BLUE","size":"15X 150MM","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":220.0,"dist_inc":140.0,"t1_inc":160.0,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":200.0,"dist_ex":127.27,"t1_ex":145.45,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309002415333","product":"PREBAR INTERNAL PVC WATERSTOP","desc":"PVC WATERSTOP","colour":"BLUE","size":"12.5X 250MM","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":310.0,"dist_inc":210.0,"t1_inc":240.0,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":281.81,"dist_ex":190.91,"t1_ex":218.18,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309002415326","product":"PREBAR INTERNAL PVC WATERSTOP","desc":"PVC WATERSTOP","colour":"BLUE","size":"15X 150MM","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":220.0,"dist_inc":140.0,"t1_inc":160.0,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":200.0,"dist_ex":127.27,"t1_ex":145.45,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309002415968","product":"PRESWELL","desc":"HYDROPHILIC WATERSTOP","colour":"BLUE","size":"10m x 10mm x 20mm","packing":"~","qty_pallet":"~","boxed_qty":"~","rrp_inc":200.0,"dist_inc":130.0,"t1_inc":150.0,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":181.82,"dist_ex":118.18,"t1_ex":136.37,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048447","product":"PREBAR JIG EXTERNAL 150","desc":"PREBAR JIG EXTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":250.0,"dist_inc":175.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":175.0,"rrp_ex":227.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":159.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048430","product":"PREBAR JIG EXTERNAL 250","desc":"PREBAR JIG EXTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":250.0,"dist_inc":175.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":175.0,"rrp_ex":227.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":159.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048423","product":"PREBAR JIG INTERNAL 150","desc":"PREBAR JIG INTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":250.0,"dist_inc":175.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":175.0,"rrp_ex":227.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":159.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048416","product":"PREBAR JIG INTERNAL 250","desc":"PREBAR JIG INTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":250.0,"dist_inc":175.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":175.0,"rrp_ex":227.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":159.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048409","product":"PREBAR L-PIECE 270 EXTERNAL 250","desc":"PREBAR L-PIECE 270 EXTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":null,"t1_ex":null,"t2_ex":309.09,"t3_ex":null,"gen_ex":33.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048386","product":"PREBAR L-PIECE 270 EXTERNAL 150","desc":"PREBAR L-PIECE 270 EXTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":30.55},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048379","product":"PREBAR L-PIECE 90 EXTERNAL 250","desc":"PREBAR L-PIECE 90 EXTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":33.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048362","product":"PREBAR L-PIECE 90 EXTERNAL 150","desc":"PREBAR L-PIECE 90 EXTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":30.55},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048355","product":"PREBAR L-PIECE 90 INTERNAL 250","desc":"PREBAR L-PIECE 90 INTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":33.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048348","product":"PREBAR L-PIECE 90 INTERNAL 150","desc":"PREBAR L-PIECE 90 INTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":30.55},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048331","product":"PREBAR T-PIECE VERTICAL EXTERNAL 250","desc":"PREBAR T-PIECE VERTICAL EXTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":33.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048324","product":"PREBAR T-PIECE VERTICAL EXTERNAL 150","desc":"PREBAR T-PIECE VERTICAL EXTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":30.55},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048317","product":"PREBAR T-PIECE VERTICAL INTERNAL 250","desc":"PREBAR T-PIECE VERTICAL INTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":33.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048300","product":"PREBAR T-PIECE VERTICAL INTERNAL 150","desc":"PREBAR T-PIECE VERTICAL INTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":30.55},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048294","product":"PREBAR CROSS PIECE VERTICAL EXTERNAL 250","desc":"PREBAR CROSS PIECE VERTICAL EXTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":33.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048287","product":"PREBAR CROSS PIECE VERTICAL EXTERNAL 150","desc":"PREBAR CROSS PIECE VERTICAL EXTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":50.0,"dist_inc":35.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":35.0,"rrp_ex":45.45,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":31.82},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048270","product":"PREBAR CROSS PIECE VERTICAL INTERNAL 250","desc":"PREBAR CROSS PIECE VERTICAL INTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":55.0,"dist_inc":38.5,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":38.5,"rrp_ex":50.0,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":35.0},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048263","product":"PREBAR CROSS PIECE VERTICAL INTERNAL 150","desc":"PREBAR CROSS PIECE VERTICAL INTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":50.0,"dist_inc":35.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":35.0,"rrp_ex":45.45,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":31.82},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048256","product":"PREBAR L-PIECE FLAT EXTERNAL 250","desc":"PREBAR L-PIECE FLAT EXTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":33.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048249","product":"PREBAR L-PIECE FLAT EXTERNAL 150","desc":"PREBAR L-PIECE FLAT EXTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":30.55},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048232","product":"PREBAR L-PIECE FLAT INTERNAL 250","desc":"PREBAR L-PIECE FLAT INTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":33.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048225","product":"PREBAR L-PIECE FLAT INTERNAL 150","desc":"PREBAR L-PIECE FLAT INTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":30.55},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048218","product":"PREBAR T-PIECE FLAT EXTERNAL 250","desc":"PREBAR T-PIECE FLAT EXTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":33.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048201","product":"PREBAR T-PIECE FLAT EXTERNAL 150","desc":"PREBAR T-PIECE FLAT EXTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":30.55},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048195","product":"PREBAR T-PIECE FLAT INTERNAL 250","desc":"PREBAR T-PIECE FLAT INTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":33.09},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309004048188","product":"PREBAR T-PIECE FLAT INTERNAL 150","desc":"PREBAR T-PIECE FLAT INTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":30.55},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309002415296","product":"ACTFLEX PROSWELL","desc":"SWELLABLE POLYURETHANE SEALANT","colour":"-","size":"600ML","packing":"TUBE","qty_pallet":"-","boxed_qty":"-","rrp_inc":45.0,"dist_inc":31.5,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":31.5,"rrp_ex":40.91,"dist_ex":127.27,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":28.64},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309000575138","product":"HIFLOW DRAINAGE CELL","desc":"DIMPLE DRAINAGE CELL","colour":"-","size":"15MM X 1.5M X 15M","packing":"ROLL","qty_pallet":"-","boxed_qty":"-","rrp_inc":400.0,"dist_inc":280.0,"t1_inc":320.0,"t2_inc":340.0,"t3_inc":360.0,"gen_inc":280.0,"rrp_ex":363.64,"dist_ex":190.91,"t1_ex":290.91,"t2_ex":null,"t3_ex":327.27,"gen_ex":254.55},{"cat":"BELOW GROUND / WATERSTOPS","gtin":"9309000575640","product":"ACTFLEX INJECTSWELL","desc":"HYDROPHILIC POLYURETHANE","colour":"CLEAR","size":"10kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":200.0,"dist_inc":140.0,"t1_inc":160.0,"t2_inc":120.0,"t3_inc":120.0,"gen_inc":null,"rrp_ex":181.82,"dist_ex":null,"t1_ex":145.46,"t2_ex":109.09,"t3_ex":null,"gen_ex":null},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309004048560","product":"ACTFLEX FLEXIPLUG 10KG","desc":"2 COMPONENT REPAIR MORTAR PROTECTIVE COATINGS","colour":"GREY","size":"10KG","packing":"BUCKET","qty_pallet":"36","boxed_qty":"~","rrp_inc":250.0,"dist_inc":175.0,"t1_inc":null,"t2_inc":175.0,"t3_inc":null,"gen_inc":175.0,"rrp_ex":227.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":159.09},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309004048553","product":"ACTFLEX FLEXIPLUG 5KG","desc":"2 COMPONENT REPAIR MORTAR PROTECTIVE COATINGS","colour":"GREY","size":"5KG","packing":"BUCKET","qty_pallet":"48","boxed_qty":"~","rrp_inc":140.0,"dist_inc":98.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":98.0,"rrp_ex":127.27,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":89.09},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309004048546","product":"ACTFLEX FLEXIPLUG 2KG","desc":"2 COMPONENT REPAIR MORTAR PROTECTIVE COATINGS","colour":"GREY","size":"2KG","packing":"BUCKET","qty_pallet":"48","boxed_qty":"~","rrp_inc":60.0,"dist_inc":42.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":42.0,"rrp_ex":54.55,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":38.18},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309004048591","product":"ACTFLEX EPOXY GROUT","desc":"2 COMPONENT SOLVENT FREE EPOXY RESIN","colour":"GREY","size":"20KG","packing":"BUCKET","qty_pallet":"-","boxed_qty":"-","rrp_inc":695.0,"dist_inc":486.5,"t1_inc":556.0,"t2_inc":590.75,"t3_inc":625.5,"gen_inc":486.5,"rrp_ex":631.82,"dist_ex":null,"t1_ex":505.46,"t2_ex":537.05,"t3_ex":568.64,"gen_ex":442.27},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309004048584","product":"ACTFLEX HBR","desc":"2 COMPONENT AND REPAIR MORTAR","colour":"GREY","size":"20KG","packing":"BUCKET","qty_pallet":"-","boxed_qty":"-","rrp_inc":780.0,"dist_inc":546.0,"t1_inc":624.0,"t2_inc":663.0,"t3_inc":702.0,"gen_inc":546.0,"rrp_ex":709.09,"dist_ex":null,"t1_ex":567.27,"t2_ex":602.73,"t3_ex":638.18,"gen_ex":496.36},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309000575565","product":"ACTFLEX POLYCRETE 20L","desc":"POLYURETHANE ADDITIVE FOR SCREEDS","colour":"CLEAR/YELLOW","size":"20kg","packing":"CUBE","qty_pallet":"32","boxed_qty":"~","rrp_inc":360.0,"dist_inc":234.0,"t1_inc":270.0,"t2_inc":288.0,"t3_inc":324.0,"gen_inc":null,"rrp_ex":327.27,"dist_ex":212.73,"t1_ex":245.45,"t2_ex":261.82,"t3_ex":294.54,"gen_ex":null},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309002415364","product":"PREFLEX HBR","desc":"HIGH BUILD EPOXY","colour":"GREY","size":"40L KIT","packing":"BUCKET","qty_pallet":"~","boxed_qty":"48","rrp_inc":1100.0,"dist_inc":715.0,"t1_inc":825.0,"t2_inc":880.0,"t3_inc":990.0,"gen_inc":null,"rrp_ex":1000.0,"dist_ex":650.0,"t1_ex":750.0,"t2_ex":800.0,"t3_ex":900.0,"gen_ex":null},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309002415357","product":"ACTFLEX HYDROPLUG","desc":"HYDRAULIC MORTAR QUICK SET","colour":"GREY","size":"20kg","packing":"BUCKET","qty_pallet":"36","boxed_qty":"$","rrp_inc":200.0,"dist_inc":140.0,"t1_inc":165.0,"t2_inc":185.0,"t3_inc":190.0,"gen_inc":null,"rrp_ex":181.81,"dist_ex":127.27,"t1_ex":149.99,"t2_ex":168.18,"t3_ex":150.0,"gen_ex":null},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309002415364","product":"ACTFLEX HYDROPLUG","desc":"HYDRAULIC MORTAR QUICK SET","colour":"GREY","size":"5kg","packing":"BUCKET","qty_pallet":"48","boxed_qty":"$","rrp_inc":55.0,"dist_inc":35.75,"t1_inc":41.25,"t2_inc":44.0,"t3_inc":49.5,"gen_inc":null,"rrp_ex":50.0,"dist_ex":32.5,"t1_ex":37.5,"t2_ex":40.0,"t3_ex":45.0,"gen_ex":null},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309002415500","product":"SCREED X ENGINEERED SCREED","desc":"ENGINEERED SCREED 10MM-100MM","colour":"GREY","size":"20kg","packing":"BAG","qty_pallet":"64","boxed_qty":"0","rrp_inc":26.0,"dist_inc":16.9,"t1_inc":19.5,"t2_inc":20.8,"t3_inc":23.4,"gen_inc":null,"rrp_ex":23.64,"dist_ex":15.37,"t1_ex":17.73,"t2_ex":18.91,"t3_ex":21.28,"gen_ex":null},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309002415708","product":"FORCEM SCREED BINDER","desc":"ENGINEERED CEMENT BINDER FOR SCREED","colour":"GREY","size":"20kg","packing":"BAG","qty_pallet":"64","boxed_qty":"~","rrp_inc":45.0,"dist_inc":29.25,"t1_inc":33.75,"t2_inc":36.0,"t3_inc":40.5,"gen_inc":null,"rrp_ex":40.91,"dist_ex":26.59,"t1_ex":30.68,"t2_ex":32.73,"t3_ex":36.82,"gen_ex":null},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309002415517","product":"FORCRETE PANEL PATCH","desc":"PANEL PATCH","colour":"GREY","size":"20kg","packing":"BAG","qty_pallet":"64","boxed_qty":"0","rrp_inc":60.0,"dist_inc":39.0,"t1_inc":45.0,"t2_inc":48.0,"t3_inc":54.0,"gen_inc":null,"rrp_ex":54.55,"dist_ex":35.46,"t1_ex":40.91,"t2_ex":43.64,"t3_ex":49.1,"gen_ex":null},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309002415821","product":"LEVEL X SELF LEVELLING","desc":"HIGH PERFORMANCE SELF LEVELLING","colour":"20kg","size":"BAG","packing":"64","qty_pallet":"$","boxed_qty":"38.00","rrp_inc":38.0,"dist_inc":24.7,"t1_inc":28.5,"t2_inc":30.4,"t3_inc":34.2,"gen_inc":null,"rrp_ex":34.54,"dist_ex":22.45,"t1_ex":25.91,"t2_ex":27.63,"t3_ex":31.09,"gen_ex":null},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309002415890","product":"LEVEL X \u00a0PRO SELF LEVELLING","desc":"HIGH PERFORMANCE SELF LEVELLING INTERNAL AND EXTERNAL","colour":"20kg","size":"BAG","packing":"64","qty_pallet":"$","boxed_qty":"44.00","rrp_inc":44.0,"dist_inc":28.6,"t1_inc":33.0,"t2_inc":35.2,"t3_inc":39.6,"gen_inc":null,"rrp_ex":40.0,"dist_ex":26.0,"t1_ex":30.0,"t2_ex":32.0,"t3_ex":36.0,"gen_ex":null},{"cat":"CONCRETE SURFACING / SCREEDS / CONCRETE REPAIRS","gtin":"9309002415883","product":"FORBUILD 100","desc":"MOISTURE RESISTANT PATCHING COMPOUND","colour":"20kg","size":"BAG","packing":"80","qty_pallet":"$","boxed_qty":"80.00","rrp_inc":80.0,"dist_inc":52.0,"t1_inc":60.0,"t2_inc":64.0,"t3_inc":72.0,"gen_inc":null,"rrp_ex":72.72,"dist_ex":47.27,"t1_ex":54.54,"t2_ex":58.18,"t3_ex":65.45,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309004048607","product":"ACTFLEX CRYSTAL BOND 30KG KIT (","desc":"2 COMPONENT EPOXY COATING CLEAR","colour":"CLEAR","size":"30KG","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":1000.0,"dist_inc":700.0,"t1_inc":800.0,"t2_inc":850.0,"t3_inc":900.0,"gen_inc":700.0,"rrp_ex":909.09,"dist_ex":636.36,"t1_ex":727.27,"t2_ex":772.73,"t3_ex":818.18,"gen_ex":636.36},{"cat":"EPOXY FLOOR COATINGS","gtin":"112PAOPF45O0010","product":"ACTFLEX CRYSTAL COAT 30L","desc":"2 COMPONENT EPOXY COATING","colour":"CUSTOM","size":"30L","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":1200.0,"dist_inc":800.0,"t1_inc":960.0,"t2_inc":850.0,"t3_inc":1080.0,"gen_inc":null,"rrp_ex":1090.91,"dist_ex":727.27,"t1_ex":872.73,"t2_ex":772.73,"t3_ex":981.82,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"112PAOPF45A020CA","product":"ACTFLEX COLOUR ADDITIVE","desc":"ADDITIVE FOR POLYASPARTIC","colour":"CUSTOM","size":"1L","packing":"BUCKET","qty_pallet":"~","boxed_qty":"6","rrp_inc":100.0,"dist_inc":70.0,"t1_inc":null,"t2_inc":null,"t3_inc":90.0,"gen_inc":null,"rrp_ex":90.91,"dist_ex":63.64,"t1_ex":null,"t2_ex":null,"t3_ex":81.82,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"112PAOPF45O0010","product":"ACTFLEX ULTRA SHIELD","desc":"2 COMPONENT POLYASPARTIC","colour":"CUSTOM","size":"20L","packing":"BUCKET","qty_pallet":"24","boxed_qty":"~","rrp_inc":1200.0,"dist_inc":800.0,"t1_inc":880.0,"t2_inc":920.0,"t3_inc":1080.0,"gen_inc":null,"rrp_ex":1090.91,"dist_ex":727.27,"t1_ex":800.0,"t2_ex":836.36,"t3_ex":981.82,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"112PAOPF45A020","product":"ACTFLEX ULTRA SHIELD","desc":"2 COMPONENT POLYASPARTIC","colour":"CUSTOM","size":"40L","packing":"BUCKET","qty_pallet":"16","boxed_qty":"~","rrp_inc":1900.0,"dist_inc":1550.0,"t1_inc":1580.0,"t2_inc":1620.0,"t3_inc":1710.0,"gen_inc":null,"rrp_ex":1727.27,"dist_ex":1409.09,"t1_ex":1436.36,"t2_ex":1472.73,"t3_ex":1554.55,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"112PAOPF45A004","product":"ACTFLEX ULTRA SHIELD","desc":"2 COMPONENT POLYASPARTIC","colour":"CUSTOM","size":"10L","packing":"BUCKET","qty_pallet":"54","boxed_qty":"~","rrp_inc":600.0,"dist_inc":420.0,"t1_inc":400.0,"t2_inc":420.0,"t3_inc":540.0,"gen_inc":null,"rrp_ex":545.45,"dist_ex":381.82,"t1_ex":363.63,"t2_ex":381.82,"t3_ex":490.91,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309000575237","product":"ACTFLEX ANTI SLIP SAND 1kg","desc":"ANTI SLIP SAND","colour":"WHITE","size":"1kg","packing":"BUCKET","qty_pallet":"~","boxed_qty":"~","rrp_inc":20.0,"dist_inc":15.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":null,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309000575237","product":"ACTFLEX ANTI SLIP SAND 20kg","desc":"ANTI SLIP SAND","colour":"WHITE","size":"20kg","packing":"BUCKET","qty_pallet":"~","boxed_qty":"~","rrp_inc":230.0,"dist_inc":155.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":null,"dist_ex":null,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309000575701","product":"FLAKEX AGATE PILE (HYBRID) 4.5kg","desc":"DECORATIVE VINYL EPOXY FAKE","colour":"GREY BASE","size":"4.5kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":120.0,"dist_inc":100.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":90.91,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309000575732","product":"FLAKEX BIANCO (HYBRID) 4.5kg","desc":"DECORATIVE VINYL EPOXY FAKE","colour":"WHITE BASE","size":"4.5kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":120.0,"dist_inc":90.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":81.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309000575725","product":"FLAKEX DOMINO (HYBRID) 4.5kg","desc":"DECORATIVE VINYL EPOXY FAKE","colour":"BLACK BASE","size":"4.5kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":120.0,"dist_inc":90.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":81.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"98224556","product":"FLAKEX HUSKY PILE (HYBRID) 4.5kg","desc":"DECORATIVE VINYL EPOXY FAKE","colour":"GREY BASE","size":"4.5kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":120.0,"dist_inc":90.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":81.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309000575961","product":"FLAKEX JUNEAU 4.5kg","desc":"DECORATIVE VINYL EPOXY FAKE","colour":"GREY BASE","size":"4.5kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":120.0,"dist_inc":90.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":81.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309000575749","product":"FLAKEX SCHIST (HYBRID) 4.5kg","desc":"DECORATIVE VINYL EPOXY FAKE","colour":"WHITE BASE","size":"4.5kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":120.0,"dist_inc":90.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":81.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309000575718","product":"FLAKEX SILVER BELLS 4.5kg","desc":"DECORATIVE VINYL EPOXY FAKE","colour":"GREY BASE","size":"4.5kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":120.0,"dist_inc":90.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":81.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309000575978","product":"FLAKEX SLATE 4.5kg","desc":"DECORATIVE VINYL EPOXY FAKE","colour":"GREY BASE","size":"4.5kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":120.0,"dist_inc":90.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":81.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"9309002415388","product":"FLAKEX SOAPSTONE 4.5kg","desc":"DECORATIVE VINYL EPOXY FAKE","colour":"CREAM BASE","size":"4.5kg","packing":"BUCKET","qty_pallet":"32","boxed_qty":"~","rrp_inc":120.0,"dist_inc":90.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":81.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"ACTFLEX PIGMENT","product":"MICA POWDER","desc":"CALL FOR COLOURS","colour":"~","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"$","rrp_inc":7.0,"dist_inc":5.5,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":6.36,"dist_ex":5.0,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"EPOXY FLOOR COATINGS","gtin":"ACTFLEX PASTE","product":"METALLIC EPOXY PASTE","desc":"CALL FOR COLOURS","colour":"~","size":"~","packing":"1","qty_pallet":"~","boxed_qty":"$","rrp_inc":7.0,"dist_inc":5.5,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":6.36,"dist_ex":5.0,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"123456789GUN","product":"FORSPEC HEAVY DUTY DUAL GUN","desc":"DUAL EPOXY GUN","colour":"-","size":"450-600ML","packing":"BOX","qty_pallet":"~","boxed_qty":"20","rrp_inc":100.0,"dist_inc":70.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":90.91,"dist_ex":63.64,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"98522253652","product":"SMEARER","desc":"CAULKING SMEARER","colour":"-","size":"-","packing":"-","qty_pallet":"-","boxed_qty":"10","rrp_inc":5.0,"dist_inc":3.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":4.55,"dist_ex":2.73,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309002415128","product":"BRUSH 100MM","desc":"PLASTIC FORSPEC","colour":"-","size":"100MM","packing":"-","qty_pallet":"-","boxed_qty":"12/120","rrp_inc":4.5,"dist_inc":3.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":4.09,"dist_ex":2.73,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309002415135","product":"BRUSH 100MM","desc":"WOOD FORSPEC","colour":"-","size":"100MM","packing":"-","qty_pallet":"-","boxed_qty":"12/120","rrp_inc":4.5,"dist_inc":3.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":4.09,"dist_ex":2.73,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309002415166","product":"BRUSH 50MM","desc":"WOOD FORSPEC","colour":"-","size":"50MM","packing":"-","qty_pallet":"-","boxed_qty":"12/120","rrp_inc":3.0,"dist_inc":2.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":2.73,"dist_ex":1.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309002415159","product":"BRUSH 75MM","desc":"WOOD FORSPEC","colour":"-","size":"75MM","packing":"-","qty_pallet":"-","boxed_qty":"12/120","rrp_inc":3.5,"dist_inc":2.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":3.18,"dist_ex":1.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309002415142","product":"ROLLER COVER 230MM","desc":"HEAVY DUTY MICROFIBRE 230MM ROLLER COVER","colour":"-","size":"230MM","packing":"PACK","qty_pallet":"6","boxed_qty":"6/60","rrp_inc":15.0,"dist_inc":10.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":13.64,"dist_ex":9.09,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"10025","product":"SHOWER NICHE 300X260","desc":"SHOWER NICHE","colour":"~","size":"300X260","packing":"~","qty_pallet":"~","boxed_qty":"4","rrp_inc":60.0,"dist_inc":50.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":54.55,"dist_ex":45.45,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"10035","product":"SHOWER NICHE 300X380","desc":"SHOWER NICHE","colour":"~","size":"300X380","packing":"~","qty_pallet":"~","boxed_qty":"10","rrp_inc":65.0,"dist_inc":52.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":59.09,"dist_ex":47.27,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"10055","product":"SHOWER NICHE 300X550","desc":"SHOWER NICHE","colour":"~","size":"300X550","packing":"~","qty_pallet":"~","boxed_qty":"7","rrp_inc":75.0,"dist_inc":60.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":68.18,"dist_ex":54.55,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"MMN-SN700","product":"SHOWER NICHE 300X700","desc":"SHOWER NICHE","colour":"~","size":"300X700","packing":"~","qty_pallet":"~","boxed_qty":"9","rrp_inc":88.0,"dist_inc":73.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":80.0,"dist_ex":66.36,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"RSL29-4639Y-3MM","product":"NOTCHED SQUEEGEE 3MMX600MM","desc":"NOTCHED SQUEEGEE","colour":"~","size":"3MMX 600MM","packing":"~","qty_pallet":"~","boxed_qty":"952","rrp_inc":45.0,"dist_inc":32.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":40.91,"dist_ex":29.09,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"RSL29-463Y-5MM","product":"NOTCHED SQUEEGEE 5MMX600MM","desc":"NOTCHED SQUEEGEE","colour":"~","size":"4MMX 600MM","packing":"~","qty_pallet":"~","boxed_qty":"966","rrp_inc":45.0,"dist_inc":32.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":40.91,"dist_ex":29.09,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"RSL29-463Y-6MM","product":"NOTCHED SQUEEGEE 9MMX600MM","desc":"NOTCHED SQUEEGEE","colour":"~","size":"9MMX 600MM","packing":"~","qty_pallet":"~","boxed_qty":"477","rrp_inc":45.0,"dist_inc":32.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":40.91,"dist_ex":29.09,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309000575190","product":"ITA 125MM CONCRETE GRINDING DISC","desc":"SURFACE GRINDING DISC","colour":"~","size":"$","packing":"48.00","qty_pallet":"$","boxed_qty":"36.00","rrp_inc":48.0,"dist_inc":36.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":43.64,"dist_ex":32.73,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9303000575381","product":"ITA V BLADE CRACK CHASING BLADE VIPER","desc":"V BLADE FOR CRACK CHASING IN CONCRETE","colour":"~","size":"$","packing":"90.00","qty_pallet":"$","boxed_qty":"67.50","rrp_inc":90.0,"dist_inc":67.5,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":81.82,"dist_ex":61.36,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309002415395","product":"PCD DISC - 125M Crushed Diamond","desc":"REMOVAL DISC FOR EPOXY AND MEMBRANE FLOORING","colour":"~","size":"$","packing":"300.00","qty_pallet":"$","boxed_qty":"210.00","rrp_inc":300.0,"dist_inc":210.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":272.73,"dist_ex":190.91,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309002415425","product":"PCD DISC - 125M 6 Segment","desc":"REMOVAL DISC FOR EPOXY AND MEMBRANE FLOORING","colour":"~","size":"$","packing":"120.00","qty_pallet":"$","boxed_qty":"90.00","rrp_inc":120.0,"dist_inc":90.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":109.09,"dist_ex":81.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309002415401","product":"PCD DISC - 180M Crushed Diamond","desc":"REMOVAL DISC FOR EPOXY AND MEMBRANE FLOORING","colour":"~","size":"$","packing":"450.00","qty_pallet":"$","boxed_qty":"340.00","rrp_inc":450.0,"dist_inc":340.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":409.09,"dist_ex":309.09,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309002415418","product":"PCD DISC - 180MM 9 Segment","desc":"REMOVAL DISC FOR EPOXY AND MEMBRANE FLOORING","colour":"~","size":"$","packing":"200.00","qty_pallet":"$","boxed_qty":"140.00","rrp_inc":200.0,"dist_inc":140.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":181.82,"dist_ex":127.27,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"TOOLS & ACCESSORIES","gtin":"9309000575022","product":"CAULKMATE Caulking Attachment","desc":"(Pack of 3)","colour":"$","size":"16.50","packing":"$","qty_pallet":"10.73","boxed_qty":"~","rrp_inc":16.5,"dist_inc":10.73,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":15.0,"dist_ex":9.75,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048171","product":"PREBAR CROSS PIECE FLAT EXTERNAL 250","desc":"PREBAR CROSS PIECE FLAT EXTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":36.4,"t2_inc":null,"t3_inc":36.4,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":33.09,"t1_ex":33.09,"t2_ex":33.09,"t3_ex":null,"gen_ex":33.09},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048164","product":"PREBAR CROSS PIECE FLAT EXTERNAL 150","desc":"PREBAR CROSS PIECE FLAT EXTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":33.6,"t2_inc":null,"t3_inc":33.6,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":30.55,"t1_ex":30.55,"t2_ex":30.55,"t3_ex":null,"gen_ex":30.55},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048157","product":"PREBAR CROSS PIECE FLAT INTERNAL 250","desc":"PREBAR CROSS PIECE FLAT INTERNAL","colour":"-","size":"250MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":52.0,"dist_inc":36.4,"t1_inc":36.4,"t2_inc":null,"t3_inc":36.4,"gen_inc":36.4,"rrp_ex":47.27,"dist_ex":33.09,"t1_ex":33.09,"t2_ex":33.09,"t3_ex":null,"gen_ex":33.09},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048140","product":"PREBAR CROSS PIECE FLAT INTERNAL 150","desc":"PREBAR CROSS PIECE FLAT INTERNAL","colour":"-","size":"150MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":48.0,"dist_inc":33.6,"t1_inc":33.6,"t2_inc":null,"t3_inc":33.6,"gen_inc":33.6,"rrp_ex":43.64,"dist_ex":30.55,"t1_ex":30.55,"t2_ex":30.55,"t3_ex":null,"gen_ex":30.55},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048126","product":"POLYFIN INDUCTION WELDING PLATE 80MM","desc":"INDUCTION WELDING PLATE","colour":"-","size":"80MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":9.0,"dist_inc":6.3,"t1_inc":6.3,"t2_inc":null,"t3_inc":6.3,"gen_inc":6.3,"rrp_ex":8.18,"dist_ex":5.73,"t1_ex":5.73,"t2_ex":5.73,"t3_ex":null,"gen_ex":5.73},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048119","product":"POLYFIN PREFORMED DRAIN PIPE 100MM","desc":"PREFORMED DRAIN PIPE","colour":"-","size":"100MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":22.0,"dist_inc":15.4,"t1_inc":15.4,"t2_inc":null,"t3_inc":15.4,"gen_inc":15.4,"rrp_ex":20.0,"dist_ex":14.0,"t1_ex":14.0,"t2_ex":14.0,"t3_ex":null,"gen_ex":14.0},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048102","product":"POLYFIN PREFORMED DRAIN PIPE 90MM","desc":"PREFORMED DRAIN PIPE","colour":"-","size":"90MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":22.0,"dist_inc":15.4,"t1_inc":15.4,"t2_inc":null,"t3_inc":15.4,"gen_inc":15.4,"rrp_ex":20.0,"dist_ex":14.0,"t1_ex":14.0,"t2_ex":14.0,"t3_ex":null,"gen_ex":14.0},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048096","product":"POLYFIN PREFORMED OUTLET PIPE TYPE B","desc":"PREFORMED OUTLET PIPE TYPE B","colour":"-","size":"-","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":20.0,"dist_inc":14.0,"t1_inc":14.0,"t2_inc":null,"t3_inc":14.0,"gen_inc":14.0,"rrp_ex":18.18,"dist_ex":12.73,"t1_ex":12.73,"t2_ex":12.73,"t3_ex":null,"gen_ex":12.73},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048089","product":"POLYFIN PREFORMED OUTLET PIPE TYPE A","desc":"PREFORMED OUTLET PIPE TYPE A","colour":"-","size":"-","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":20.0,"dist_inc":14.0,"t1_inc":14.0,"t2_inc":null,"t3_inc":14.0,"gen_inc":14.0,"rrp_ex":18.18,"dist_ex":12.73,"t1_ex":12.73,"t2_ex":12.73,"t3_ex":null,"gen_ex":12.73},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048072","product":"POLYFIN ANGLE BAR EXTERNAL 15x50","desc":"ANGLE BAR EXTERNAL","colour":"-","size":"15X50MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":30.0,"dist_inc":21.0,"t1_inc":21.0,"t2_inc":null,"t3_inc":21.0,"gen_inc":21.0,"rrp_ex":27.27,"dist_ex":19.09,"t1_ex":19.09,"t2_ex":19.09,"t3_ex":null,"gen_ex":19.09},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048065","product":"POLYFIN ANGLE BAR EXTERNAL 40x40","desc":"ANGLE BAR EXTERNAL","colour":"-","size":"40X40MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":32.0,"dist_inc":22.4,"t1_inc":22.4,"t2_inc":null,"t3_inc":22.4,"gen_inc":22.4,"rrp_ex":29.09,"dist_ex":20.36,"t1_ex":20.36,"t2_ex":20.36,"t3_ex":null,"gen_ex":20.36},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048058","product":"POLYFIN ANGLE BAR INTERNAL 40x40","desc":"ANGLE BAR INTERNAL","colour":"-","size":"40X40MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":32.0,"dist_inc":22.4,"t1_inc":22.4,"t2_inc":null,"t3_inc":22.4,"gen_inc":22.4,"rrp_ex":29.09,"dist_ex":20.36,"t1_ex":20.36,"t2_ex":20.36,"t3_ex":null,"gen_ex":20.36},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048041","product":"POLYFIN INNER CORNER METAL ROOF 1.2","desc":"INNER CORNER METAL ROOF","colour":"-","size":"1.2MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":20.0,"dist_inc":14.0,"t1_inc":14.0,"t2_inc":null,"t3_inc":14.0,"gen_inc":14.0,"rrp_ex":18.18,"dist_ex":12.73,"t1_ex":12.73,"t2_ex":12.73,"t3_ex":null,"gen_ex":12.73},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048034","product":"POLYFIN OUTER CORNER METAL ROOF 1.2","desc":"OUTER CORNER METAL ROOF","colour":"-","size":"1.2MM","packing":"-","qty_pallet":"-","boxed_qty":"-","rrp_inc":20.0,"dist_inc":14.0,"t1_inc":14.0,"t2_inc":null,"t3_inc":14.0,"gen_inc":14.0,"rrp_ex":18.18,"dist_ex":12.73,"t1_ex":12.73,"t2_ex":12.73,"t3_ex":null,"gen_ex":12.73},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048027","product":"POLYFIN PVC MEMBRANE TYPE H","desc":"PVC MEMBRANE TYPE H","colour":"-","size":"1.5MM X 2M X 20M","packing":"ROLL","qty_pallet":"-","boxed_qty":"-","rrp_inc":899.95,"dist_inc":629.97,"t1_inc":719.96,"t2_inc":764.96,"t3_inc":809.96,"gen_inc":629.97,"rrp_ex":818.14,"dist_ex":572.7,"t1_ex":654.51,"t2_ex":695.42,"t3_ex":736.33,"gen_ex":572.7},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309004048010","product":"POLYFIN PVC MEMBRANE TYPE P","desc":"PVC MEMBRANE TYPE P (REINFORCED)","colour":"-","size":"1.5MM X 2M X 20M","packing":"ROLL","qty_pallet":"-","boxed_qty":"-","rrp_inc":999.95,"dist_inc":699.97,"t1_inc":799.96,"t2_inc":849.96,"t3_inc":462.08,"gen_inc":699.97,"rrp_ex":909.05,"dist_ex":636.34,"t1_ex":727.24,"t2_ex":772.69,"t3_ex":818.15,"gen_ex":636.34},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"151536997","product":"FORSPEC PENNY ROLLER","desc":"27.5MM WHEEL","colour":"-","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"20","rrp_inc":32.0,"dist_inc":22.0,"t1_inc":null,"t2_inc":22.0,"t3_inc":28.0,"gen_inc":null,"rrp_ex":29.09,"dist_ex":20.0,"t1_ex":null,"t2_ex":20.0,"t3_ex":25.45,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"1420","product":"FORSPEC PRESSURE ROLLER","desc":"40MM SILICON PRESSURE ROLLER","colour":"-","size":"40MM","packing":"-","qty_pallet":"-","boxed_qty":"20","rrp_inc":38.0,"dist_inc":28.0,"t1_inc":null,"t2_inc":38.0,"t3_inc":38.0,"gen_inc":null,"rrp_ex":34.55,"dist_ex":25.45,"t1_ex":null,"t2_ex":34.55,"t3_ex":34.55,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"90876467898","product":"FORSPEC PRESSURE ROLLER","desc":"80MM SILICON PRESSURE ROLLER","colour":"-","size":"80MM","packing":"-","qty_pallet":"-","boxed_qty":"20","rrp_inc":50.0,"dist_inc":35.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":45.45,"dist_ex":31.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309002415470","product":"ROLLER PRESSURE 40MM","desc":"HDPE PRESSURE ROLLER\u00a0 40MM","colour":"RED","size":"40MM","packing":"~","qty_pallet":"~","boxed_qty":"20","rrp_inc":50.0,"dist_inc":35.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":45.45,"dist_ex":31.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309002415111","product":"ROLLER PRESSURE","desc":"DUAL PRESSURE ROLLER 40MM + PENNY","colour":"RED","size":"40MM","packing":"~","qty_pallet":"~","boxed_qty":"20","rrp_inc":70.0,"dist_inc":49.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":63.64,"dist_ex":44.55,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309002415746","product":"HEAVY DUTY PRESSURE ROLLER","desc":"11kg PRESSURE ROLLER","colour":"BLUE","size":"120MM","packing":"~","qty_pallet":"~","boxed_qty":"1","rrp_inc":350.0,"dist_inc":245.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":318.18,"dist_ex":222.73,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309002415739","product":"HEAVY DUTY PRESSURE ROLLER","desc":"20kg PRESSURE ROLLER","colour":"BLUE","size":"250MM","packing":"~","qty_pallet":"~","boxed_qty":"1","rrp_inc":450.0,"dist_inc":315.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":409.09,"dist_ex":286.36,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309002415777","product":"PRESSURE ROLLER WITH PROBE","desc":"PROBE + ROLLER DUAL","colour":"~","size":"~","packing":"~","qty_pallet":"~","boxed_qty":"20","rrp_inc":32.0,"dist_inc":24.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":29.09,"dist_ex":21.82,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309002415753","product":"SHEET MEMBRANE CUTTER","desc":"HAND HELD SHEET CUTTER","colour":"RED","size":"~","packing":"~","qty_pallet":"20","boxed_qty":"$","rrp_inc":40.0,"dist_inc":29.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":36.36,"dist_ex":26.36,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"9309000575985","product":"ROLLER PRESSURE","desc":"EXTENDABLE LARGE 190MM","colour":"RED","size":"190MM","packing":"~","qty_pallet":"~","boxed_qty":"12","rrp_inc":80.0,"dist_inc":56.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":72.73,"dist_ex":50.91,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"SHEET MEMBRANE ACCESSORIES","gtin":"90876467898","product":"ROLLER PRESSURE","desc":"SILICON 90MM (LARGE)","colour":"RED","size":"90MM","packing":"~","qty_pallet":"~","boxed_qty":"20","rrp_inc":55.0,"dist_inc":38.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":50.0,"dist_ex":34.55,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"FLOOD TESTING","gtin":"9309000575893","product":"FLOOD TEST BALLOON 50MM","desc":"PRESSURISED BALLOONS","colour":"BLACK","size":"50MM","packing":"~","qty_pallet":"~","boxed_qty":"50","rrp_inc":22.0,"dist_inc":15.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":22.73,"dist_ex":13.64,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"FLOOD TESTING","gtin":"9309000575909","product":"FLOOD TEST BALLOON 75MM","desc":"PRESSURISED BALLOONS","colour":"BLACK","size":"75MM","packing":"~","qty_pallet":"~","boxed_qty":"50","rrp_inc":22.0,"dist_inc":null,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":22.73,"dist_ex":13.64,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"FLOOD TESTING","gtin":"9309000575916","product":"FLOOD TEST BALLOON 100MM","desc":"PRESSURISED BALLOONS","colour":"BLACK","size":"100MM","packing":"~","qty_pallet":"~","boxed_qty":"50","rrp_inc":22.0,"dist_inc":15.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":22.73,"dist_ex":13.64,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"FLOOD TESTING","gtin":"9309000575923","product":"FLOOD TEST BALLOON 150MM","desc":"PRESSURISED BALLOONS","colour":"BLACK","size":"150MM","packing":"~","qty_pallet":"~","boxed_qty":"30","rrp_inc":30.0,"dist_inc":22.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":27.27,"dist_ex":20.0,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"FLOOD TESTING","gtin":"9309002415104","product":"FLOOD TEST BALLOON 200MM","desc":"PRESSURISED BALLOONS","colour":"BLACK","size":"200MM","packing":"~","qty_pallet":"~","boxed_qty":"20","rrp_inc":60.0,"dist_inc":42.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":60.91,"dist_ex":38.18,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null},{"cat":"FLOOD TESTING","gtin":"9309000575886","product":"FLOOD TEST BALLOON 250MM","desc":"PRESSURISED BALLOONS","colour":"BLACK","size":"250MM","packing":"~","qty_pallet":"~","boxed_qty":"20","rrp_inc":65.0,"dist_inc":45.0,"t1_inc":null,"t2_inc":null,"t3_inc":null,"gen_inc":null,"rrp_ex":66.36,"dist_ex":40.91,"t1_ex":null,"t2_ex":null,"t3_ex":null,"gen_ex":null}];
+const ITA_DATA  = [{"cat":"PUDDLE FLANGE RECESSING KITS","gtin":"9309000575428","product":"ITA 230MM CONCRETE DUAL FLANGE RECESS KIT","desc":"SUITS ALLPROOF STEPPED PUDDLE FLANGES OR EQUIVALENT","rrp_inc":672.0,"dist_inc":540.0,"rrp_ex":611.0,"dist_ex":490.91},{"cat":"PUDDLE FLANGE RECESSING KITS","gtin":"9309000575183","product":"ITA 230MM FC SHEETING RECESS KIT","desc":"SUITS ALLPROOF STEPPED PUDDLE FLANGES OR EQUIVALENT","rrp_inc":504.0,"dist_inc":378.0,"rrp_ex":458.0,"dist_ex":343.63},{"cat":"PUDDLE FLANGE RECESSING KITS","gtin":"9309002415807","product":"ITA 200MM CONCRETE RECESS KIT","desc":"SUITS PUDDLE PRO 100MM PUDDLE FLANGE OR EQUIVALENT","rrp_inc":392.0,"dist_inc":302.4,"rrp_ex":356.0,"dist_ex":274.91},{"cat":"PUDDLE FLANGE RECESSING KITS","gtin":"9309002415548","product":"ITA 230MM DUAL FC RECESS DISC KIT","desc":"SUITS ALLPROOF STEPPED PUDDLE FLANGES OR EQUIVALENT","rrp_inc":549.0,"dist_inc":421.2,"rrp_ex":499.0,"dist_ex":382.91},{"cat":"PUDDLE FLANGE RECESSING KITS","gtin":"9309002415814","product":"ITA 150MM CONCRETE RECESS KIT","desc":"SUITS ACTNOW 100MM RUBBER PUDDLE FLANGES OR EQUIVALENT","rrp_inc":330.0,"dist_inc":237.6,"rrp_ex":300.0,"dist_ex":216.0},{"cat":"SPARE DISCS OR SHROUDS","gtin":"003273","product":"ITA 150MM FC HOLESAW SPARE","desc":"SPARE HOLE SAW ATTACHMENT - 230MM FC DISC","rrp_inc":101.0,"dist_inc":73.44,"rrp_ex":92.0,"dist_ex":66.77},{"cat":"SPARE DISCS OR SHROUDS","gtin":"00526","product":"ITA 180MM CONCRETE FLANGE RECESS DISC","desc":"SUITED FOR PLASTEC RRJ PUDDLE FLANGE 90MM","rrp_inc":202.0,"dist_inc":145.8,"rrp_ex":183.0,"dist_ex":132.55},{"cat":"SPARE DISCS OR SHROUDS","gtin":"9309000575121","product":"ITA 150MM CONCRETE FLANGE RECESS DISC","desc":"FOR ACTNOW 100MM RUBBER FLANGE","rrp_inc":162.0,"dist_inc":116.64,"rrp_ex":148.0,"dist_ex":106.03},{"cat":"SPARE DISCS OR SHROUDS","gtin":"9309000575374","product":"ITA 230MM CONCRETE DUAL FLANGE RECESS DISC","desc":"FOR ALLPROOF PUDDLE FLANGE 100MM OR SIMILAR FLANGES","rrp_inc":504.0,"dist_inc":388.8,"rrp_ex":458.0,"dist_ex":353.45},{"cat":"SPARE DISCS OR SHROUDS","gtin":"9309000575558","product":"ITA 180MM DISC (SPARE)","desc":"SUITED FOR PLASTEC RRJ PUDDLE FLANGE 90MM","rrp_inc":84.0,"dist_inc":59.4,"rrp_ex":76.0,"dist_ex":54.0},{"cat":"SPARE DISCS OR SHROUDS","gtin":"9309002415555","product":"ITA 230MM DUAL FC RECESS DISC","desc":"FOR ALLPROOF PUDDLE FLANGE 100MM OR SIMILAR FLANGES","rrp_inc":437.0,"dist_inc":345.6,"rrp_ex":397.0,"dist_ex":314.18},{"cat":"SPARE DISCS OR SHROUDS","gtin":"9309002415562","product":"ITA 230MM CONCRETE DISC (SINGLE)","desc":"FOR 220MM FLAT PUDDLE FLANGES (NO STEP)","rrp_inc":336.0,"dist_inc":243.0,"rrp_ex":305.0,"dist_ex":220.91},{"cat":"SPARE DISCS OR SHROUDS","gtin":"9309000575787","product":"ITA 290MM DUST SHROUD WITH RING","desc":"DUST SHROUD - ALL RECESS TOOLS","rrp_inc":179.0,"dist_inc":129.6,"rrp_ex":163.0,"dist_ex":117.82},{"cat":"SPARE DISCS OR SHROUDS","gtin":"9309000575213","product":"ITA 180MM DUST SHROUD","desc":"DUST SHROUD - 150MM CONCRETE DISC","rrp_inc":168.0,"dist_inc":121.5,"rrp_ex":153.0,"dist_ex":110.45},{"cat":"SPARE DISCS OR SHROUDS","gtin":"9309002415098","product":"ITA 150MM CONCRETE DISC (SPARE)","desc":"SPARE DISC FOR THE 230MM DUAL CONCRETE DISC","rrp_inc":134.0,"dist_inc":97.2,"rrp_ex":122.0,"dist_ex":88.37},{"cat":"SPARE DISCS OR SHROUDS","gtin":"9309000575794","product":"ITA 200MM CONCRETE RECESS DISC","desc":"DISC SUITED FOR PUDDLE PRO 100MM PUDDLE FLANGE","rrp_inc":224.0,"dist_inc":162.0,"rrp_ex":204.0,"dist_ex":147.27},{"cat":"SPARE DISCS OR SHROUDS","gtin":"9309002415586","product":"ITA 230MM FC SHEETING DISC","desc":"SUITS ALLPROOF STEPPED PUDDLE FLANGES OR EQUIVALENT","rrp_inc":246.0,"dist_inc":324.0,"rrp_ex":224.0,"dist_ex":294.55},{"cat":"CONCRETE GRINDING","gtin":"9309000575190","product":"ITA 125MM CONCRETE GRINDING DISC","desc":"SURFACE GRINDING DISC","rrp_inc":54.0,"dist_inc":38.88,"rrp_ex":49.0,"dist_ex":35.35},{"cat":"CONCRETE GRINDING","gtin":"9303000575381","product":"ITA V BLADE CRACK CHASING BLADE","desc":"VIPER V BLADE FOR CRACK CHASING IN CONCRETE","rrp_inc":101.0,"dist_inc":72.9,"rrp_ex":92.0,"dist_ex":66.27},{"cat":"CONCRETE GRINDING","gtin":"9309002415395","product":"PCD DISC - 125M Crushed Diamond","desc":"REMOVAL DISC FOR EPOXY AND MEMBRANE FLOORING","rrp_inc":336.0,"dist_inc":226.8,"rrp_ex":305.0,"dist_ex":206.18},{"cat":"CONCRETE GRINDING","gtin":"9309002415425","product":"PCD DISC - 125M 6 Segment","desc":"REMOVAL DISC FOR EPOXY AND MEMBRANE FLOORING","rrp_inc":134.0,"dist_inc":97.2,"rrp_ex":122.0,"dist_ex":88.37},{"cat":"CONCRETE GRINDING","gtin":"9309002415401","product":"PCD DISC - 180M Crushed Diamond","desc":"REMOVAL DISC FOR EPOXY AND MEMBRANE FLOORING","rrp_inc":504.0,"dist_inc":367.2,"rrp_ex":458.0,"dist_ex":333.82},{"cat":"CONCRETE GRINDING","gtin":"9309002415418","product":"PCD DISC - 180MM 9 Segment","desc":"REMOVAL DISC FOR EPOXY AND MEMBRANE FLOORING","rrp_inc":224.0,"dist_inc":151.2,"rrp_ex":204.0,"dist_ex":137.45},{"cat":"GROUT REMOVAL","gtin":"9309000575800","product":"ITA GROUT BUSTER 2000 KIT","desc":"GROUT REMOVING MACHINE","rrp_inc":504.0,"dist_inc":378.0,"rrp_ex":458.0,"dist_ex":343.63},{"cat":"GROUT REMOVAL","gtin":"9309000575855","product":"ITA GROUT REMOVAL BLADE 1.2MM","desc":"SPARE BLADE FOR GROUT BUSTER 2000","rrp_inc":45.0,"dist_inc":32.4,"rrp_ex":41.0,"dist_ex":29.45},{"cat":"GROUT REMOVAL","gtin":"9309000575848","product":"ITA GROUT REMOVAL BLADE 1.7MM","desc":"SPARE BLADE FOR GROUT BUSTER 2000","rrp_inc":45.0,"dist_inc":32.4,"rrp_ex":41.0,"dist_ex":29.45},{"cat":"GROUT REMOVAL","gtin":"9309000575831","product":"ITA GROUT REMOVAL BLADE 2.2MM","desc":"SPARE BLADE FOR GROUT BUSTER 2000","rrp_inc":47.0,"dist_inc":32.4,"rrp_ex":43.0,"dist_ex":29.45},{"cat":"GROUT REMOVAL","gtin":"9309000575862","product":"ITA GROUT REMOVAL BLADE 2.7MM","desc":"SPARE BLADE FOR GROUT BUSTER 2000","rrp_inc":49.0,"dist_inc":32.4,"rrp_ex":45.0,"dist_ex":29.45},{"cat":"GROUT REMOVAL","gtin":"930600035355","product":"ITA GROUT SAW BLADE CUTTING 2MM","desc":"SPARE BLADE FOR GROUT BUSTER 2000","rrp_inc":54.0,"dist_inc":38.88,"rrp_ex":49.0,"dist_ex":35.35},{"cat":"LEAK CONTROL FLANGES / PUDDLE FLANGES / FLOOD TESTING","gtin":"000265665","product":"PUDDLE PRO 100MM PUDDLE FLANGE","desc":"ABS PLASTIC 100MM PUDDLE FLANGE","rrp_inc":15.0,"dist_inc":9.18,"rrp_ex":14.0,"dist_ex":null},{"cat":"LEAK CONTROL FLANGES / PUDDLE FLANGES / FLOOD TESTING","gtin":"000265664","product":"PUDDLE PRO 90MM PUDDLE FLANGE","desc":"ABS PLASTIC 90MM ON TOP OF SCREED PUDDLE FLANGE","rrp_inc":15.0,"dist_inc":9.18,"rrp_ex":14.0,"dist_ex":null},{"cat":"LEAK CONTROL FLANGES / PUDDLE FLANGES / FLOOD TESTING","gtin":"10200","product":"ACTNOW 100MM RUBBER PUDDLE FLANGE","desc":"100MM RUBBER PUDDLE FLANGE - CONCRETE ONLY","rrp_inc":12.0,"dist_inc":8.32,"rrp_ex":11.0,"dist_ex":null},{"cat":"LEAK CONTROL FLANGES / PUDDLE FLANGES / FLOOD TESTING","gtin":"102001","product":"ACTNOW 100MM RUBBER FLOOD TEST FLANGE","desc":"100MM FLOOD TESTING RUBBER PUDDLE FLANGE - CONCRETE ONLY","rrp_inc":13.0,"dist_inc":9.5,"rrp_ex":12.0,"dist_ex":null},{"cat":"LEAK CONTROL FLANGES / PUDDLE FLANGES / FLOOD TESTING","gtin":"LC100C","product":"FLANGE ALLPROOF PVC LEAK CONTROL 100MM","desc":"PVC PLASTIC 100MM LEAK CONTROL FLANGE","rrp_inc":10.0,"dist_inc":9.18,"rrp_ex":9.0,"dist_ex":null},{"cat":"LEAK CONTROL FLANGES / PUDDLE FLANGES / FLOOD TESTING","gtin":"9309000575916","product":"FLOOD TEST BALLOON 200MM","desc":"RUBBER BALLOON WITH VALVE PUMP","rrp_inc":67.0,"dist_inc":45.36,"rrp_ex":61.0,"dist_ex":41.23},{"cat":"LEAK CONTROL FLANGES / PUDDLE FLANGES / FLOOD TESTING","gtin":"9309000575923","product":"FLOOD TEST BALLOON 250MM","desc":"RUBBER BALLOON WITH VALVE PUMP","rrp_inc":73.0,"dist_inc":48.6,"rrp_ex":66.0,"dist_ex":44.18},{"cat":"LEAK CONTROL FLANGES / PUDDLE FLANGES / FLOOD TESTING","gtin":"9309000575104","product":"FLOOD TEST BALLOON 50MM","desc":"RUBBER BALLOON WITH VALVE PUMP","rrp_inc":25.0,"dist_inc":16.2,"rrp_ex":20.0,"dist_ex":14.73},{"cat":"LEAK CONTROL FLANGES / PUDDLE FLANGES / FLOOD TESTING","gtin":"9309000575886","product":"FLOOD TEST BALLOON 75MM","desc":"RUBBER BALLOON WITH VALVE PUMP","rrp_inc":25.0,"dist_inc":16.2,"rrp_ex":20.0,"dist_ex":14.73},{"cat":"LEAK CONTROL FLANGES / PUDDLE FLANGES / FLOOD TESTING","gtin":"9309000575893","product":"FLOOD TEST BALLOON 100MM","desc":"RUBBER BALLOON WITH VALVE PUMP","rrp_inc":25.0,"dist_inc":16.2,"rrp_ex":22.0,"dist_ex":14.73},{"cat":"OTHER TOOLS","gtin":"9309000575435","product":"ITA 125MM TILE MASTER CUTTING BLADE","desc":"FINE EDGE TILE CUTTING BLADE","rrp_inc":73.0,"dist_inc":52.65,"rrp_ex":66.0,"dist_ex":47.87},{"cat":"OTHER TOOLS","gtin":"11/RBBRGU280","product":"ITA 280MM RUBBER GUARD","desc":"SPARE RUBBER GUARD FOR 280MM DUST SHROUD","rrp_inc":84.0,"dist_inc":60.75,"rrp_ex":76.0,"dist_ex":55.23},{"cat":"OTHER TOOLS","gtin":"00026","product":"ITA HOLE SAW KIT 8PC","desc":"HOLE SAW KIT FOR STRIP DRAINS","rrp_inc":134.0,"dist_inc":97.2,"rrp_ex":122.0,"dist_ex":88.37},{"cat":"OTHER TOOLS","gtin":"0000524896532","product":"ITA PILOT 14MM DRILL BIT","desc":"14MM DRILL BIT FOR FC SHEETING","rrp_inc":17.0,"dist_inc":12.15,"rrp_ex":15.0,"dist_ex":11.05}];
+let MASTER   = JSON.parse(JSON.stringify(ORIGINAL));
+let pdfFile  = null, outWB = null;
+let curTier  = 'dist', curGST = 'inc', updatedN = 0;
+let modalCfgs = [], modalBrand = '';
+
+const FORSPEC_TC = `General Information: Forspec operates as the central system distributor throughout Australia. All customer orders must be submitted via email or fax to our Customer Service Department, located in Sydney. Website: www.forspec.com.au | Email: info@forspec.com.au | Phone: (02) 8021 3517 | Business Hours: Monday–Friday 7:00 AM–5:00 PM | Saturday 8:00 AM–12:00 PM | Sunday Closed
+Next Day Delivery – Sydney Metro Only: Orders must be received by 12:00 PM for next business day delivery.
+Hand Unloads: Must be pre-arranged and will incur a $30.00 charge per pallet, plus $50.00 for every additional 10 minutes.
+Payment Terms: 30 days from invoice. Credit Card payments may attract a surcharge.
+Returns/Cancellations: Not accepted without prior written authorisation. Must be within 7 days. 20% restocking fee may apply. Return freight charges are PREPAID. Powdered products and non-standard/specially ordered goods cannot be returned.
+Ownership of Goods: Risk passes to Customer on delivery. Title remains with Forspec until full payment is received.
+Full Terms & Conditions: www.forspec.com.au`;
+const ITA_TC     = `Customer Orders: Email or fax to Customer Service, Brisbane. Website: www.innovativetoolsaustralia.com.au | Authorised Distributor: sales@thewaterproofingshop.com.au | Phone: (02) 8021 3517 | Mon–Fri 7:00 AM–5:00 PM | Sat 8:00 AM–12:00 PM
+Order Cut-off: Metro Next-Day — 2:00 PM AEST. Sydney Metro — 12:00 PM for next-business-day delivery.
+Interstate Delivery: Metro 1–2 days · City 2–3 days · Rural 4–5 days.
+Returns: Prior written authorisation required. Within 7 days. 25% restocking fee. Return freight PREPAID. No returns on powdered or special-order goods.
+Payment Terms: Contact Sales. Credit Card payments may attract a surcharge.
+Full Terms & Conditions: www.innovativetoolsaustralia.com.au`;
+
+// ── DRAG & DROP ──
+['dzExcel','dzPDF'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('over'));
+  el.addEventListener('drop', e => {
+    e.preventDefault(); el.classList.remove('over');
+    const f = e.dataTransfer.files[0];
+    if (f) id==='dzExcel' ? loadExcel(f) : loadPDF(f);
+  });
+});
+
+// ── LOAD EXCEL ──
+async function loadExcel(file) {
+  MASTER = JSON.parse(JSON.stringify(ORIGINAL));
+  updatedN = 0;
+  const ab = await file.arrayBuffer();
+  const wb = XLSX.read(ab, {type:'array'});
+  const incN = wb.SheetNames.find(n => /inc/i.test(n)) || wb.SheetNames[0];
+  const exN  = wb.SheetNames.find(n => /ex/i.test(n) && !/inc/i.test(n)) || wb.SheetNames[1];
+  const xlI = parseXL(wb.Sheets[incN], false);
+  const xlE = parseXL(wb.Sheets[exN],  true);
+  const iG={},iN={},eG={},eN={};
+  xlI.forEach(p=>{iG[p.gtin]=p;iN[p.product.toUpperCase()]=p;});
+  xlE.forEach(p=>{eG[p.gtin]=p;eN[p.product.toUpperCase()]=p;});
+  for (const p of MASTER) {
+    const xi = iG[p.gtin]||iN[p.product.toUpperCase()];
+    const xe = eG[p.gtin]||eN[p.product.toUpperCase()];
+    if (xi) {
+      if (xi.rrp !=null) p.rrp_inc =xi.rrp;
+      if (xi.dist!=null) p.dist_inc=xi.dist;
+      p.t1_inc=xi.t1; p.t2_inc=xi.t2; p.t3_inc=xi.t3;
+      updatedN++;
+    }
+    if (xe) {
+      if (xe.rrp !=null) p.rrp_ex =xe.rrp;
+      if (xe.dist!=null) p.dist_ex=xe.dist;
+      p.t1_ex=xe.t1; p.t2_ex=xe.t2; p.t3_ex=xe.t3;
+    }
+  }
+  mark('dzExcel','iExcel','nExcel','bExcel',file.name,`${updatedN} products updated`);
+  if (document.getElementById('result').classList.contains('show')) {
+    document.getElementById('sUpdated').textContent=updatedN;
+    renderPreview();
+  }
+}
+
+function parseXL(ws,isEx){
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+  const out=[];
+  for(const r of rows){
+    const pad=[...r,...Array(10).fill(null)];
+    const[,b,c,d,e,f,g,h]=pad;
+    if(c==='Product'||b==='GTIN'||typeof b!=='number'||!c) continue;
+    const ok=v=>v!=null&&(!isEx||v!==0);
+    out.push({gtin:String(Math.round(b)),product:String(c).trim(),
+      rrp:d!=null?r2(d):null,dist:ok(e)?r2(e):null,
+      t1:ok(f)?r2(f):null,t2:ok(g)?r2(g):null,t3:ok(h)?r2(h):null});
+  }
+  return out;
+}
+
+function loadPDF(file){pdfFile=file;mark('dzPDF','iPDF','nPDF','bPDF',file.name,'Ready');}
+function mark(dz,ic,nm,bd,fn,meta){
+  document.getElementById(dz).classList.add('loaded');
+  document.getElementById(ic).textContent='✅';
+  document.getElementById(nm).textContent=`${fn} — ${meta}`;
+  const b=document.getElementById(bd);b.textContent=meta;b.className='hbadge ok';
+}
+
+// ── GENERATE ──
+async function generate(){
+  document.getElementById('genBtn').disabled=true;
+  document.getElementById('prog').classList.add('show');
+  document.getElementById('result').classList.remove('show');
+  step(0,'run');p(10,'Loading 205 products…');await tick();step(0,'done');
+  step(1,'run');p(25,'Applying Excel updates…');await tick();step(1,'done');
+  step(2,'run');p(42,'Reading PDF…');
+  if(pdfFile){try{await mergePDF();}catch(e){console.warn(e);}}
+  step(2,'done');
+  step(3,'run');p(60,'Building Excel sheets…');await tick();
+  outWB=buildWB();
+  step(3,'done');
+  step(4,'run');p(92,'Finalising…');await tick();
+  step(4,'done');p(100,'Complete!');
+  showResult();
+  document.getElementById('genBtn').disabled=false;
+}
+
+async function mergePDF(){
+  const b64=await toB64(pdfFile);
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:3000,
+      messages:[{role:'user',content:[
+        {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+        {type:'text',text:'Extract all product rows from the DISTRIBUTOR price table. Return ONLY a raw JSON array (start with [, no markdown). Each item: {"gtin":"item no","product":"name","rrp":0.00,"dist":0.00}. INC GST prices only. Numbers only.'}
+      ]}]})
+  });
+  const data=await res.json();
+  const txt=data.content.map(i=>i.text||'').join('');
+  const m=txt.match(/\[[\s\S]*\]/);
+  if(!m) return;
+  for(const pp of JSON.parse(m[0])){
+    const hit=MASTER.find(p=>p.gtin===String(pp.gtin)||p.product.toUpperCase()===(pp.product||'').toUpperCase());
+    if(hit&&pp.rrp){hit.rrp_inc=pp.rrp;hit.rrp_ex=r2(pp.rrp/1.1);}
+  }
+}
+
+// ── BUILD EXCEL WORKBOOK ──
+function buildWB(){
+  const wb=XLSX.utils.book_new();
+  const cfgs=[
+    {name:'Distributor INC GST',rc:'rrp_inc',dc:'dist_inc',tier:'DISTRIBUTOR',gst:'INC GST'},
+    {name:'Tier 1 INC GST',     rc:'rrp_inc',dc:'t1_inc',  tier:'TIER 1',     gst:'INC GST'},
+    {name:'Tier 2 INC GST',     rc:'rrp_inc',dc:'t2_inc',  tier:'TIER 2',     gst:'INC GST'},
+    {name:'Tier 3 INC GST',     rc:'rrp_inc',dc:'t3_inc',  tier:'TIER 3',     gst:'INC GST'},
+    {name:'General INC GST',    rc:'rrp_inc',dc:null,       tier:'GENERAL',    gst:'INC GST'},
+    {name:'Distributor EX GST', rc:'rrp_ex', dc:'dist_ex',  tier:'DISTRIBUTOR',gst:'EX GST'},
+    {name:'Tier 1 EX GST',      rc:'rrp_ex', dc:'t1_ex',   tier:'TIER 1',     gst:'EX GST'},
+    {name:'Tier 2 EX GST',      rc:'rrp_ex', dc:'t2_ex',   tier:'TIER 2',     gst:'EX GST'},
+    {name:'Tier 3 EX GST',      rc:'rrp_ex', dc:'t3_ex',   tier:'TIER 3',     gst:'EX GST'},
+  ];
+  for(const c of cfgs) XLSX.utils.book_append_sheet(wb,buildSheet(c),c.name);
+  return wb;
+}
+
+function buildSheet(cfg){
+  const today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const aoa=[],merges=[],prRows=[];
+  aoa.push([`FORSPEC Protective Coatings — ${cfg.tier} Price List (${cfg.gst})`,...Array(9).fill('')]);
+  aoa.push([`The Waterproofing Shop  |  thewaterproofingshop.com.au  |  Generated: ${today}`,...Array(9).fill('')]);
+  aoa.push(Array(10).fill(''));
+  aoa.push(['ITEM NO / GTIN','PRODUCT NAME','DESCRIPTION','COLOUR','SIZE','PACKING TYPE','QTY PER PALLET','BOXED QTY',
+    `RRP UNIT PRICE (${cfg.gst})`, cfg.dc?`DISCOUNTED PRICE (${cfg.gst})`:'RRP ONLY — NO DISCOUNT']);
+  const cats=[],byCat={};
+  for(const p of MASTER){if(!byCat[p.cat]){byCat[p.cat]=[];cats.push(p.cat);}byCat[p.cat].push(p);}
+  for(const cat of cats){
+    const ri=aoa.length;
+    aoa.push([cat,...Array(9).fill('')]);
+    merges.push({s:{r:ri,c:0},e:{r:ri,c:9}});
+    for(const p of byCat[cat]){
+      const rv=p[cfg.rc]!=null?r2(p[cfg.rc]):'';
+      const dv=cfg.dc&&p[cfg.dc]!=null?r2(p[cfg.dc]):'';
+      aoa.push([p.gtin,p.product,p.desc||'',p.colour||'',p.size||'',p.packing||'',p.qty_pallet||'',p.boxed_qty||'',rv,dv]);
+      if(rv!==''||dv!=='') prRows.push(aoa.length-1);
+    }
+  }
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=merges;
+  ws['!cols']=[{wch:20},{wch:34},{wch:36},{wch:12},{wch:13},{wch:13},{wch:13},{wch:11},{wch:22},{wch:24}];
+  ws['!freeze']={xSplit:0,ySplit:4};
+  for(const R of prRows) for(const C of [8,9]){
+    const addr=XLSX.utils.encode_cell({r:R,c:C});
+    const cell=ws[addr];
+    if(cell&&typeof cell.v==='number'&&cell.v>0){cell.t='n';cell.z='"$"#,##0.00';}
+  }
+  return ws;
+}
+
+// ── PDF MODAL ──
+function showPDFModal(brand){
+  if(!outWB){alert('Please click Generate first.');return;}
+  modalBrand=brand;
+  const isITA=brand==='ita';
+  if(isITA){
+    modalCfgs=[
+      {label:'Distributor — INC GST (ALL PRICES INCLUDE GST)',gst:'inc',dc:'dist'},
+      {label:'Distributor — EX GST (ALL PRICES EXCLUDE GST)',gst:'ex', dc:'dist'},
+    ];
+  }else{
+    modalCfgs=[
+      {label:'Distributor — INC GST',gst:'inc',dc:'dist'},
+      {label:'Tier 1 — INC GST',     gst:'inc',dc:'t1'},
+      {label:'Tier 2 — INC GST',     gst:'inc',dc:'t2'},
+      {label:'Tier 3 — INC GST',     gst:'inc',dc:'t3'},
+      {label:'General — INC GST',    gst:'inc',dc:null},
+      {label:'Distributor — EX GST', gst:'ex', dc:'dist'},
+      {label:'Tier 1 — EX GST',      gst:'ex', dc:'t1'},
+      {label:'Tier 2 — EX GST',      gst:'ex', dc:'t2'},
+      {label:'Tier 3 — EX GST',      gst:'ex', dc:'t3'},
+    ];
+  }
+  document.getElementById('modalTitle').textContent = isITA?'🔧 Innovative Tools PDFs':'📄 Forspec PDFs';
+  document.getElementById('modalSub').textContent   = 'Select which to export. Each opens in a new tab — Ctrl+P → Save as PDF.';
+  document.getElementById('modalGo').style.background = isITA?'linear-gradient(135deg,#14532d,#166534)':'linear-gradient(135deg,#0a1628,#1a3460)';
+  document.getElementById('modalItems').innerHTML = modalCfgs.map((c,i)=>
+    `<label class="modal-item">
+      <input type="checkbox" value="${i}" checked>
+      ${c.label}
+    </label>`).join('');
+  document.getElementById('pdfModal').classList.add('open');
+}
+
+function closeModal(){document.getElementById('pdfModal').classList.remove('open');}
+
+function exportPDFs(){
+  const checked=[...document.querySelectorAll('#modalItems input:checked')].map(cb=>parseInt(cb.value));
+  closeModal();
+  let delay=0;
+  checked.forEach(i=>{
+    setTimeout(()=>{
+      const cfg={...modalCfgs[i],brand:modalBrand};
+      openPDFTab(modalBrand==='ita'?ITA_DATA:MASTER, cfg);
+    },delay);
+    delay+=900;
+  });
+}
+
+// ── BUILD PDF HTML (matching exact Word/PDF format) ──
+function openPDFTab(products, cfg){
+  const isITA = cfg.brand==='ita';
+  const isEx  = cfg.gst==='ex';
+  const today = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+  const gstNote = isEx?'ALL PRICES SHOWN EXCLUDE GST':'ALL PRICES SHOWN INCLUDE GST';
+
+  // Group by category
+  const cats=[],byCat={};
+  for(const p of products){
+    const c=p.cat||'OTHER';
+    if(!byCat[c]){byCat[c]=[];cats.push(c);}
+    byCat[c].push(p);
+  }
+
+  // Build rows
+  let rows='';
+  for(const cat of cats){
+    rows+=`<tr class="cat"><td colspan="6">${cat}</td></tr>`;
+    for(const p of byCat[cat]){
+      const rv = isEx ? p.rrp_ex  : p.rrp_inc;
+      const dv = cfg.dc ? (isEx ? p[cfg.dc+'_ex'] : p[cfg.dc+'_inc']) : null;
+      const rF = rv!=null?`$ ${r2(rv).toFixed(2)}`:'';
+      const dF = dv!=null?`$ ${r2(dv).toFixed(2)}`:'';
+      rows+=`<tr>
+        <td class="gtin">${p.gtin||''}</td>
+        <td class="prod">${p.product||''}</td>
+        <td class="desc">${p.desc||''}</td>
+        <td class="c">${p.colour||''}</td>
+        <td class="c">${p.size||''}</td>
+        <td class="c">${p.packing||''}</td>
+        <td class="c">${p.qty_pallet||''}</td>
+        <td class="c">${p.boxed_qty||''}</td>
+        <td class="m">${rF}</td>
+        <td class="m">${cfg.dc===null?'':dF}</td>
+      </tr>`;
+    }
+  }
+
+  const rHdr = isEx?'RRP UNIT PRICE EX GST':'RRP UNIT PRICE INC GST';
+  const dHdr = cfg.dc===null?'(RRP ONLY)':(isEx?'DISCOUNTED PRICE EX GST':'DISCOUNTED PRICE INC GST');
+  const tierLbl = cfg.label.split('—')[0].trim();
+  const tc = isITA ? ITA_TC : FORSPEC_TC;
+
+  // Header block matching brand
+  const headerHTML = isITA ? `
+    <div class="header ita-header">
+      <div class="logo-block">
+        <div class="ita-logo">INN<span class="dot">◉</span>VATIVE<br><small>TOOLS AUSTRALIA</small></div>
+      </div>
+      <div class="header-info">
+        <div class="doc-title">JANUARY 2026 — Innovative Tools</div>
+        <div class="doc-sub">${gstNote} &nbsp;·&nbsp; Distributor Price List &nbsp;·&nbsp; ${today}</div>
+        <div class="doc-contact">22/872 Canterbury Road, Roselands 2196 NSW &nbsp;|&nbsp; P: (02) 8021 3517 &nbsp;|&nbsp; E: enquiry@innovativetoolsaustralia.com.au &nbsp;|&nbsp; W: www.innovativetoolsaustralia.com.au</div>
+      </div>
+    </div>` : `
+    <div class="header fs-header">
+      <div class="logo-block">
+        <div class="fs-logo">FORSPEC<br><small>PROTECTIVE COATINGS</small></div>
+      </div>
+      <div class="header-info">
+        <div class="doc-title">Forspec Protective Coatings Price List (${tierLbl})</div>
+        <div class="doc-sub">${gstNote} &nbsp;·&nbsp; ${today}</div>
+        <div class="doc-contact">Website: www.forspec.com.au &nbsp;|&nbsp; Email: info@forspec.com.au &nbsp;|&nbsp; Phone: (02) 8021 3517 &nbsp;|&nbsp; Mon–Fri 7:00 AM–5:00 PM &nbsp;|&nbsp; Sat 8:00 AM–12:00 PM</div>
+      </div>
+      <div class="tws-block">
+        <div class="tws-sm">Australian Authorised Distributor</div>
+        <div class="tws-name-sm">The Waterproofing Shop</div>
+        <div class="tws-url">thewaterproofingshop.com.au</div>
+      </div>
+    </div>`;
+
+  const html=`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>${cfg.label}</title>
+<style>
+  @page { size:A4 landscape; margin:10mm 8mm 8mm 8mm; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Arial,Helvetica,sans-serif;font-size:7.5pt;color:#111;background:#fff;}
+
+  /* HEADER */
+  .header{display:flex;align-items:stretch;gap:0;margin-bottom:5px;border-radius:5px;overflow:hidden;}
+  .fs-header{background:linear-gradient(135deg,#0a1628 0%,#1a3460 100%);color:white;}
+  .ita-header{background:linear-gradient(135deg,#0a1f0a 0%,#1a3d1a 100%);color:white;}
+  .logo-block{padding:10px 14px;display:flex;align-items:center;border-right:1px solid rgba(255,255,255,.15);}
+  .fs-logo{font-size:13pt;font-weight:900;color:#60a5fa;letter-spacing:-.3px;line-height:1.15;text-align:center;}
+  .fs-logo small{font-size:5pt;color:#8ab4d8;letter-spacing:1.5px;display:block;margin-top:2px;}
+  .ita-logo{font-size:12pt;font-weight:900;color:#4ade80;letter-spacing:-.2px;line-height:1.15;text-align:center;}
+  .ita-logo .dot{color:#86efac;font-size:10pt;}
+  .ita-logo small{font-size:5pt;color:#6ee7a0;letter-spacing:2px;display:block;margin-top:2px;}
+  .header-info{flex:1;padding:8px 14px;display:flex;flex-direction:column;justify-content:center;}
+  .doc-title{font-size:12pt;font-weight:800;color:white;margin-bottom:3px;}
+  .doc-sub{font-size:7.5pt;color:#94a3b8;margin-bottom:2px;font-weight:600;}
+  .doc-contact{font-size:6.5pt;color:#8ab4d8;}
+  .tws-block{padding:8px 14px;border-left:1px solid rgba(255,255,255,.15);display:flex;flex-direction:column;justify-content:center;min-width:130px;}
+  .tws-sm{font-size:6pt;color:#8ab4d8;letter-spacing:.5px;margin-bottom:2px;}
+  .tws-name-sm{font-size:9pt;font-weight:800;color:white;line-height:1.1;}
+  .tws-url{font-size:6pt;color:#60a5fa;margin-top:2px;}
+
+  /* T&C */
+  .tc{border:1px solid #dde3ed;border-radius:4px;padding:6px 10px;font-size:6.2pt;color:#444;line-height:1.6;margin-bottom:5px;background:#f9fafc;}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse;}
+  thead th{
+    background:#0a1628;color:#60a5fa;
+    font-size:6.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+    padding:5px 6px;text-align:left;border:1px solid #1a3460;
+  }
+  .ita-header ~ * thead th, table.ita-table thead th{
+    background:#0a1f0a;color:#4ade80;border-color:#1a3d1a;
+  }
+  thead th.r{text-align:right;}
+  tbody tr:nth-child(even) td{background:#f8faff;}
+  td{padding:3.5px 6px;border:1px solid #e8ecf2;font-size:7pt;vertical-align:middle;}
+  tr.cat td{
+    background:linear-gradient(90deg,#e8f0ff,#f0f5ff);
+    font-size:6.5pt;font-weight:800;color:#1565c0;
+    text-transform:uppercase;letter-spacing:.9px;padding:5px 6px;
+    border-top:2px solid #c7d8f0;border-bottom:1px solid #c7d8f0;
+  }
+  .ita-table tr.cat td{background:linear-gradient(90deg,#e0f0e0,#f0f8f0);color:#15803d;border-color:#9ecdb5;}
+  td.gtin{font-family:'Courier New',monospace;font-size:6.3pt;color:#555;width:88px;}
+  td.prod{font-weight:700;width:138px;font-size:7pt;}
+  td.desc{color:#444;width:168px;}
+  td.c{text-align:center;width:52px;}
+  td.m{text-align:right;font-weight:700;width:74px;font-family:'Courier New',monospace;color:#0a1628;}
+
+  /* FOOTER */
+  .footer{margin-top:5px;padding-top:4px;border-top:1px solid #ddd;font-size:6pt;color:#888;display:flex;justify-content:space-between;}
+  .footer a{color:#1565c0;}
+</style>
+</head>
+<body>
+
+${headerHTML}
+
+<div class="tc">${tc.split('\n').filter(l=>l.trim()).map(l=>`<div>${l.trim()}</div>`).join('')}</div>
+
+<table class="${isITA?'ita-table':''}">
+  <thead>
+    <tr>
+      <th style="width:88px">ITEM NO.</th>
+      <th style="width:138px">PRODUCT</th>
+      <th style="width:168px">DESCRIPTION</th>
+      <th class="r" style="width:52px">COLOUR</th>
+      <th class="r" style="width:52px">SIZE</th>
+      <th class="r" style="width:52px">PACKING</th>
+      <th class="r" style="width:48px">QTY/PALLET</th>
+      <th class="r" style="width:48px">BOXED QTY</th>
+      <th class="r" style="width:74px">${rHdr}</th>
+      <th class="r" style="width:74px">${dHdr}</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+</table>
+
+<div class="footer">
+  <span>${isITA?'Innovative Tools Australia · www.innovativetoolsaustralia.com.au':'Forspec Protective Coatings · www.forspec.com.au'} &nbsp;|&nbsp; The Waterproofing Shop · thewaterproofingshop.com.au · (02) 8021 3517</span>
+  <span>Generated ${today}</span>
+</div>
+</body>
+</html>`;
+
+  const win=window.open('','_blank','width=1200,height=800');
+  win.document.write(html);
+  win.document.close();
+  win.onload=()=>setTimeout(()=>{win.focus();win.print();},600);
+}
+
+// ── SHOW RESULT ──
+function showResult(){
+  document.getElementById('result').classList.add('show');
+  document.getElementById('rSub').textContent=`205 products · 14 categories · 9 Excel sheets · 11 PDF variants · ${new Date().toLocaleDateString('en-AU')}`;
+  document.getElementById('sUpdated').textContent=updatedN;
+  const fz=MASTER.find(p=>p.product==='FORZAFLEX BASE 3MM');
+  const sp=MASTER.find(p=>p.product&&p.product.includes('SUPER PRIME 008'));
+  const chk=[
+    {l:'INC RRP',v:fz?.rrp_inc,e:165,blank:false},{l:'INC Dist',v:fz?.dist_inc,e:115.5,blank:false},
+    {l:'INC T1', v:fz?.t1_inc, e:132,blank:false},{l:'INC T2', v:fz?.t2_inc,  e:140.25,blank:false},
+    {l:'INC T3', v:fz?.t3_inc, e:148.5,blank:false},
+    {l:'EX RRP', v:fz?.rrp_ex, e:150, blank:false},{l:'EX Dist',v:fz?.dist_ex,e:105,blank:false},
+    {l:'EX T1',  v:fz?.t1_ex,  e:120, blank:false},{l:'EX T2', v:fz?.t2_ex,  e:127.5,blank:false},
+    {l:'EX T3',  v:fz?.t3_ex,  e:135, blank:false},
+    {l:'SP RRP', v:sp?.rrp_inc,e:70,  blank:false},{l:'SP Dist',v:sp?.dist_inc,e:null,blank:true},
+    {l:'SP T1',  v:sp?.t1_inc, e:null,blank:true},{l:'SP T2',v:sp?.t2_inc,e:null,blank:true},
+    {l:'SP T3',  v:sp?.t3_inc, e:null,blank:true},
+  ];
+  document.getElementById('vgrid').innerHTML=chk.map(c=>{
+    let ok,note;
+    if(c.blank){ok=c.v==null;note=ok?'✓ blank':'✗ should blank';}
+    else{const v=c.v!=null?r2(c.v):null;ok=v!=null&&Math.abs(v-c.e)<0.02;note=ok?'✓':`✗ exp $${c.e}`;}
+    return`<div class="vc ${ok?'ok':'err'}"><div class="vc-l">${c.l}</div><div class="vc-v">${c.v!=null?'$'+r2(c.v).toFixed(2):'—'}</div><div class="vc-n">${note}</div></div>`;
+  }).join('');
+  document.getElementById('shGrid').innerHTML=[
+    {n:'Distributor INC GST',inc:true},{n:'Tier 1 INC GST',inc:true},{n:'Tier 2 INC GST',inc:true},
+    {n:'Tier 3 INC GST',inc:true},{n:'General INC GST',inc:true},
+    {n:'Distributor EX GST',inc:false},{n:'Tier 1 EX GST',inc:false},
+    {n:'Tier 2 EX GST',inc:false},{n:'Tier 3 EX GST',inc:false},
+  ].map(c=>`<div class="sc ${c.inc?'inc':'ex'}"><div class="sc-n">📋 ${c.n}</div><div class="sc-m">${c.inc?'INC GST prices':'EX GST prices'}</div></div>`).join('');
+  renderPreview();
+  document.getElementById('result').scrollIntoView({behavior:'smooth'});
+}
+
+// ── PREVIEW ──
+function setTier(t,btn){curTier=t;document.querySelectorAll('.ctrl-grp .tbtn:not(.gon)').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderPreview();}
+function setGST(g,btn){curGST=g;document.querySelectorAll('.ctrl-grp .tbtn').forEach(b=>b.classList.remove('gon'));btn.classList.add('gon');renderPreview();}
+
+function renderPreview(){
+  const rCol=curGST==='inc'?'rrp_inc':'rrp_ex';
+  const dMap={dist:curGST==='inc'?'dist_inc':'dist_ex',t1:curGST==='inc'?'t1_inc':'t1_ex',t2:curGST==='inc'?'t2_inc':'t2_ex',t3:curGST==='inc'?'t3_inc':'t3_ex',gen:null};
+  const dCol=dMap[curTier];
+  const gLbl=curGST==='inc'?'Inc GST':'Ex GST';
+  const tLbl={dist:'Distributor',t1:'Tier 1',t2:'Tier 2',t3:'Tier 3',gen:'General'}[curTier];
+  document.getElementById('thRRP').textContent=`RRP (${gLbl})`;
+  document.getElementById('thDisc').textContent=curTier==='gen'?'(RRP Only)':`DISCOUNTED — ${tLbl}`;
+  const q=(document.getElementById('searchBox')?.value||'').toLowerCase().trim();
+  const cat=document.getElementById('catSelect')?.value||'';
+  const filtered=MASTER.filter(p=>{
+    if(cat&&p.cat!==cat) return false;
+    if(!q) return true;
+    return(p.gtin||'').includes(q)||(p.product||'').toLowerCase().includes(q)||(p.desc||'').toLowerCase().includes(q);
+  });
+  document.getElementById('rCount').textContent=`${filtered.length} of 205`;
+  let html='',lastCat=null;
+  for(const p of filtered){
+    if(!cat&&p.cat!==lastCat){html+=`<tr class="cat-row"><td colspan="10">${p.cat}</td></tr>`;lastCat=p.cat;}
+    const rv=p[rCol],dv=dCol?p[dCol]:null;
+    const rF=rv!=null?`$${r2(rv).toFixed(2)}`:null,dF=dv!=null?`$${r2(dv).toFixed(2)}`:null;
+    html+=`<tr>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">${p.gtin}</td>
+      <td style="font-weight:600;font-size:12px">${p.product}</td>
+      <td style="color:var(--muted);font-size:11px">${p.desc||''}</td>
+      <td style="font-size:11px">${p.colour||''}</td>
+      <td style="font-size:11px">${p.size||''}</td>
+      <td style="font-size:11px">${p.packing||''}</td>
+      <td class="r">${p.qty_pallet||''}</td>
+      <td class="r">${p.boxed_qty||''}</td>
+      ${rF?`<td class="r">${rF}</td>`:`<td class="blank">—</td>`}
+      ${curTier==='gen'?`<td class="blank" style="font-size:10px;text-align:right">RRP only</td>`:(dF?`<td class="r">${dF}</td>`:`<td class="blank">—</td>`)}
+    </tr>`;
+  }
+  if(!filtered.length) html=`<tr><td colspan="10" class="no-result">No products match your search.</td></tr>`;
+  document.getElementById('pvBody').innerHTML=html;
+}
+
+function dlExcel(){if(!outWB)return;XLSX.writeFile(outWB,`FORSPEC_Price_Lists_${new Date().toISOString().slice(0,10)}.xlsx`);}
+const r2=v=>Math.round(v*100)/100;
+const tick=()=>new Promise(r=>setTimeout(r,60));
+const toB64=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(f);});
+function p(pct,lbl){document.getElementById('pFill').style.width=pct+'%';document.getElementById('pPct').textContent=pct+'%';document.getElementById('pLbl').textContent=lbl;}
+function step(i,s){document.getElementById('ps'+i).className='ps '+s;}
+</script>
+</body>
+</html>
